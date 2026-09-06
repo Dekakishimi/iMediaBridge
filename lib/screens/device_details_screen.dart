@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../services/ble_controller.dart';
+import 'media_interface.dart';
 
 class DeviceDetailsScreen extends StatefulWidget {
   final BluetoothDevice device;
@@ -46,11 +47,21 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
       appBar: AppBar(
         title: Text(widget.device.platformName.isEmpty ? 'Device View' : widget.device.platformName),
         actions: [
-          IconButton(
+          IconButton( // Handle Disconnection
             icon: const Icon(Icons.bluetooth_disabled),
             onPressed: () async {
               await _bleController.disconnectDevice(widget.device);
               if (mounted) Navigator.of(context).pop();
+            },
+          ),
+          IconButton( // Go to Media Interface
+            icon: const Icon(Icons.home),
+            onPressed: () async {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const MediaInterface(),
+                ),
+              );
             },
           )
         ],
