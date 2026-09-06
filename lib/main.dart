@@ -3,16 +3,16 @@ import 'screens/scan_screen.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const BleApp());
+  runApp(const MediaBridge());
 }
 
-class BleApp extends StatelessWidget {
-  const BleApp({super.key});
+class MediaBridge extends StatelessWidget {
+  const MediaBridge({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BLE Handbook App',
+      title: 'MediaBridge',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),

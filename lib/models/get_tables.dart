@@ -14,10 +14,10 @@ class GetCommandsForAMS {
     // ENTITYID = 0 (PLAYER)
 
     'GetPlayerNameBytes': CommandBytes(
-      bytes: [0,0]
+        bytes: [0,0]
     ),
     'GetPlaybackInfoBytes': CommandBytes(
-      bytes: [0,1]
+        bytes: [0,1]
     ),
     'GetVolumeBytes': CommandBytes(
         bytes: [0,2]

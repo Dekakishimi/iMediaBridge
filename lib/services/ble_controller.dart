@@ -1,8 +1,24 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'get_info.dart';
+import '../models/current_info.dart';
 
 class BleController {
+  //memory leak fix
+  bool _isUpdating = false; // Add this flag
+
+  Future<void> handleUpdate() async {
+    if (_isUpdating) return; // Exit if an update is already running
+
+    _isUpdating = true;
+    try {
+      await InfoService().writeToAMS();
+    } finally {
+      _isUpdating = false; // Always reset the flag, even if it fails
+    }
+  }
+
   // ABANDONED AT THE MOMENT //
   // //initializing variable for the map
   // String currentVal = '';
@@ -114,19 +130,18 @@ class BleController {
 
   // Map charUuid -> Track Title
   final Map<String, String> trackTitles = {};
-
+//DEPRECATED CODE EXISTS IN THIS SECTION, IT IS BEST TO KEEP THIS ALONE UNLESS
+// NO ERRORS/FUNCTIONALITY BREAKS (DEVICE DETAILS DEBUG SCREEN WILL BREAK IF U REMOVE THIS.)
   void onDataReceived(String charUuid, List<int> rawValue) {
     if (rawValue.isEmpty) return;
 
-    // If first value starts with 1, handle as track title
-    if (rawValue[0] == 2 && rawValue[1] == 2) {
-      print("Track Title Packet Received: $rawValue");
+    // updates regardless of value
+    if (rawValue[0] == 2 ) {
       try {
         // Decode as UTF-8 (more robust than fromCharCodes)
-        String decoded = utf8.decode(rawValue.skip(1).toList(), allowMalformed: true).trim();
+        String decoded = utf8.decode(
+            rawValue.skip(3).toList(), allowMalformed: true).trim();
         decoded = decoded.replaceAll(RegExp(r'\x00'), '');
-        
-        print("Decoded Title: '$decoded'");
         if (decoded.isNotEmpty) {
           trackTitles[charUuid] = decoded;
         }
@@ -146,10 +161,13 @@ class BleController {
 
     // Only update if the value actually changed
     if (existingCurrent == formattedValue) return;
-
+    // 1. Update the map FIRST
     charValues[charUuid] = {
       'prev': existingCurrent,
       'current': formattedValue,
     };
+
+    // 2. Then trigger the update
+    handleUpdate();
   }
 }

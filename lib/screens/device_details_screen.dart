@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../services/ble_controller.dart';
 import 'media_interface.dart';
+import '../services/get_info.dart';
 
 class DeviceDetailsScreen extends StatefulWidget {
   final BluetoothDevice device;
@@ -14,6 +15,7 @@ class DeviceDetailsScreen extends StatefulWidget {
 
 class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
   final BleController _bleController = BleController();
+  final infoService = InfoService();
   List<BluetoothService> _services = [];
   bool _isLoading = true;
   final Map<String, List<int>> _characteristicValues = {};
@@ -57,6 +59,7 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
           IconButton( // Go to Media Interface
             icon: const Icon(Icons.home),
             onPressed: () async {
+              infoService.writeToAMS();
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const MediaInterface(),
@@ -125,7 +128,7 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
                           char.isNotifying ? Icons.notifications_active : Icons.notifications_off,
                           color: char.isNotifying ? Colors.green : Colors.grey,
                         ),
-                        onPressed: () async {
+                        onPressed: () async { //Implement subscription automatically when open media player
                           await _bleController.toggleNotification(char, (data) {
                             setState(() => _characteristicValues[charUuid] = data);
                           });
