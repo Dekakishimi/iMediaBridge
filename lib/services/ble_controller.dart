@@ -1,20 +1,30 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class BleController {
+  // ABANDONED AT THE MOMENT //
+  // //initializing variable for the map
+  // String currentVal = '';
+  // String previousVal = '';
+
   // Singleton pattern for easy access
   static final BleController _instance = BleController._internal();
+
   factory BleController() => _instance;
+
   BleController._internal();
 
   BluetoothDevice? connectedDevice;
   final Map<String, StreamSubscription> _notificationSubscriptions = {};
 
   // Check if Bluetooth is supported and enabled
-  Stream<BluetoothAdapterState> get adapterState => FlutterBluePlus.adapterState;
+  Stream<BluetoothAdapterState> get adapterState =>
+      FlutterBluePlus.adapterState;
 
   // Start scanning for nearby devices
-  Future<void> startScan({Duration timeout = const Duration(seconds: 15)}) async {
+  Future<void> startScan(
+      {Duration timeout = const Duration(seconds: 15)}) async {
     if (await FlutterBluePlus.isSupported == false) return;
 
     // Ensure adapter is ON before scanning
@@ -36,7 +46,9 @@ class BleController {
   // Connect to a target device
   Future<void> connectToDevice(BluetoothDevice device) async {
     await stopScan();
-    await device.connect(autoConnect: false, timeout: const Duration(seconds: 10), license: License.nonprofit);
+    await device.connect(autoConnect: false,
+        timeout: const Duration(seconds: 10),
+        license: License.nonprofit);
     connectedDevice = device;
   }
 
@@ -53,27 +65,29 @@ class BleController {
   }
 
   // Discover GATT Services and Characteristics
-  Future<List<BluetoothService>> discoverServices(BluetoothDevice device) async {
+  Future<List<BluetoothService>> discoverServices(
+      BluetoothDevice device) async {
     return await device.discoverServices();
   }
 
   // Read data from a characteristic
-  Future<List<int>> readCharacteristic(BluetoothCharacteristic characteristic) async {
+  Future<List<int>> readCharacteristic(
+      BluetoothCharacteristic characteristic) async {
     return await characteristic.read();
   }
 
   // Write data to a characteristic (Single flexible method)
-  Future<void> writeCharacteristic(BluetoothCharacteristic characteristic, List<int> bytes) async {
+  Future<void> writeCharacteristic(BluetoothCharacteristic characteristic,
+      List<int> bytes) async {
     // Automatically uses writeWithoutResponse if standard write isn't supported
-    bool withoutResponse = characteristic.properties.writeWithoutResponse && !characteristic.properties.write;
+    bool withoutResponse = characteristic.properties.writeWithoutResponse &&
+        !characteristic.properties.write;
     await characteristic.write(bytes, withoutResponse: withoutResponse);
   }
 
   // Subscribe / Unsubscribe to Characteristic Notifications/Indications
-  Future<void> toggleNotification(
-      BluetoothCharacteristic characteristic,
-      Function(List<int>) onDataReceived,
-      ) async {
+  Future<void> toggleNotification(BluetoothCharacteristic characteristic,
+      Function(List<int>) onDataReceived,) async {
     final charKey = characteristic.uuid.toString();
 
     if (characteristic.isNotifying) {
@@ -87,10 +101,55 @@ class BleController {
 
       // Listen to incoming value stream
       final subscription = characteristic.lastValueStream.listen((value) {
+        this.onDataReceived(charKey, value); //adds the value to the map...
         onDataReceived(value);
       });
 
       _notificationSubscriptions[charKey] = subscription;
     }
+  }
+
+  // Map charUuid -> {'current': '...', 'prev': '...'}
+  final Map<String, Map<String, String>> charValues = {};
+
+  // Map charUuid -> Track Title
+  final Map<String, String> trackTitles = {};
+
+  void onDataReceived(String charUuid, List<int> rawValue) {
+    if (rawValue.isEmpty) return;
+
+    // If first value starts with 1, handle as track title
+    if (rawValue[0] == 2 && rawValue[1] == 2) {
+      print("Track Title Packet Received: $rawValue");
+      try {
+        // Decode as UTF-8 (more robust than fromCharCodes)
+        String decoded = utf8.decode(rawValue.skip(1).toList(), allowMalformed: true).trim();
+        decoded = decoded.replaceAll(RegExp(r'\x00'), '');
+        
+        print("Decoded Title: '$decoded'");
+        if (decoded.isNotEmpty) {
+          trackTitles[charUuid] = decoded;
+        }
+      } catch (e) {
+        // Fallback to basic char codes if UTF-8 fails
+        String decoded = String.fromCharCodes(rawValue.skip(1)).trim();
+        decoded = decoded.replaceAll(RegExp(r'\x00'), '');
+        if (decoded.isNotEmpty) {
+          trackTitles[charUuid] = decoded;
+        }
+      }
+    }
+
+    String formattedValue = rawValue.join(',');
+
+    String existingCurrent = charValues[charUuid]?['current'] ?? '';
+
+    // Only update if the value actually changed
+    if (existingCurrent == formattedValue) return;
+
+    charValues[charUuid] = {
+      'prev': existingCurrent,
+      'current': formattedValue,
+    };
   }
 }

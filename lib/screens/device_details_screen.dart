@@ -66,7 +66,9 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
             subtitle: Text('UUID: ${service.uuid}'),
             children: service.characteristics.map((char) {
               final charUuid = char.uuid.toString();
-              final currentVal = _characteristicValues[charUuid] ?? [];
+              final currentVal = _bleController.charValues[charUuid]?['current'] ?? '';
+              final previousVal = _bleController.charValues[charUuid]?['prev'] ?? '';
+              final trackTitle = _bleController.trackTitles[charUuid] ?? '';
 
               return ListTile(
                 title: Text('Char: ${charUuid.substring(0, 4)}...'),
@@ -74,8 +76,16 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Properties: ${_getPropertiesString(char.properties)}'),
-                    if (currentVal.isNotEmpty)
-                      Text('Value: $currentVal', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                    if (trackTitle.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text('Track Title: $trackTitle', 
+                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    if (previousVal.isNotEmpty) //code for previous value after receiving new values.
+                      Text('Value: $previousVal', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                    if (currentVal.isNotEmpty) //code for the next values received. (mostly after pausing the music client)
+                      Text('Value: $currentVal', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 trailing: Row(
@@ -87,6 +97,7 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
                         icon: const Icon(Icons.download, color: Colors.blue),
                         onPressed: () async {
                           final val = await _bleController.readCharacteristic(char);
+                          _bleController.onDataReceived(charUuid, val);
                           setState(() => _characteristicValues[charUuid] = val);
                         },
                       ),
