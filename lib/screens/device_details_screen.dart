@@ -175,10 +175,18 @@ void _showWriteDialog(BluetoothCharacteristic char) {
                       .split(',')
                       .map((e) => int.parse(e.trim()))
                       .toList();
-                } else {
-                  // Fallback to sending standard ASCII text string bytes
-                  bytes = input.codeUnits;
-                }
+                } else { //updated to automatically send hex and decimal values instead of Strings which fails to execute on AMS.
+                  bytes = input
+                      .split(RegExp(r'[ ,]+'))
+                      .map((e) {
+                    final clean = e.trim();
+                    // Handles both decimal (2) and hex (0x02)
+                    return clean.startsWith('0x')
+                        ? int.parse(clean.substring(2), radix: 16)
+                        : int.parse(clean);
+                  })
+                      .toList();
+              }
 
                 await _bleController.writeCharacteristic(char, bytes);
 
