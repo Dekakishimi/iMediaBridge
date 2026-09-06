@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 class MediaPlayerInfo {
-  List<Object> trackName, artistName, repeatStatus, shuffleStatus, isPlaying, duration;
+  List<Object> trackName, artistName, repeatStatus, shuffleStatus, isPlaying, duration, albumName;
 
   MediaPlayerInfo({
     required this.trackName,
@@ -10,6 +10,7 @@ class MediaPlayerInfo {
     required this.shuffleStatus,
     required this.isPlaying,
     required this.duration,
+    required this.albumName,
   });
 }
 
@@ -25,6 +26,7 @@ class CurrentInfoString {
         shuffleStatus: [],
         isPlaying: [],
         duration: [],
+        albumName: [],
     ),
   };
 }

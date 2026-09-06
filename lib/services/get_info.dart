@@ -50,40 +50,6 @@ class InfoService {
               amsRemoteChar, command.bytes);
           await Future.delayed(const Duration(
               milliseconds: 100)); //delay to catch up with responses
-
-          // inserting the values in the current info map
-
-          if (amsRemoteChar.lastValue.length > 2) {
-            // Access the specific entry in the registry
-            final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
-
-            if (playerInfo != null) {
-              String decoded = utf8.decode(amsRemoteChar.lastValue.skip(3).toList(), allowMalformed: true).trim();
-              decoded = decoded.replaceAll(RegExp(r'\x00'), '');
-
-              // Identify which attribute was received (Entity ID 2 = Track Info)
-              if (amsRemoteChar.lastValue[0] == 2) {
-                switch (amsRemoteChar.lastValue[1]) {
-                  case 0: // Artist Name
-                    playerInfo.artistName = [decoded];
-                    print("Updated Artist: $decoded");
-                    CurrentInfoString.updateTrigger.value++;
-                    break;
-                  case 2: // Track Title
-                    playerInfo.trackName = [decoded];
-                    CurrentInfoString.updateTrigger.value++;
-                    print("Updated Title: $decoded");
-                    break;
-                  case 3: // Duration
-                    playerInfo.duration = [decoded];
-                    CurrentInfoString.updateTrigger.value++;
-                    print("Updated Duration: $decoded");
-                    break;
-                }
-              }
-            }
-          }
-          print("Command ${command.bytes} result: ${amsRemoteChar.lastValue}");
         }
       } catch (e) {
         print("Error in writeToAMS: $e");

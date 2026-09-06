@@ -133,25 +133,41 @@ class BleController {
 //DEPRECATED CODE EXISTS IN THIS SECTION, IT IS BEST TO KEEP THIS ALONE UNLESS
 // NO ERRORS/FUNCTIONALITY BREAKS (DEVICE DETAILS DEBUG SCREEN WILL BREAK IF U REMOVE THIS.)
   void onDataReceived(String charUuid, List<int> rawValue) {
-    if (rawValue.isEmpty) return;
+    if (rawValue.length <= 3) return; //reject the value if its only 2 bytes or less
 
     // updates regardless of value
-    if (rawValue[0] == 2 ) {
-      try {
-        // Decode as UTF-8 (more robust than fromCharCodes)
-        String decoded = utf8.decode(
-            rawValue.skip(3).toList(), allowMalformed: true).trim();
-        decoded = decoded.replaceAll(RegExp(r'\x00'), '');
-        if (decoded.isNotEmpty) {
-          trackTitles[charUuid] = decoded;
-        }
-      } catch (e) {
-        // Fallback to basic char codes if UTF-8 fails
-        String decoded = String.fromCharCodes(rawValue.skip(1)).trim();
-        decoded = decoded.replaceAll(RegExp(r'\x00'), '');
-        if (decoded.isNotEmpty) {
-          trackTitles[charUuid] = decoded;
-        }
+    if (rawValue[0] == 2) { // Entity 2 (TrackInfo)
+      String decoded = utf8.decode(rawValue.skip(3).toList(), allowMalformed: true).trim();
+      decoded = decoded.replaceAll(RegExp(r'\x00'), '');
+
+      final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
+      if (playerInfo == null) return;
+
+      bool changed = false;
+      switch (rawValue[1]) {
+        case 0: // Artist
+          playerInfo.artistName = [decoded];
+          print("Artist Name: $decoded");
+          changed = true;
+          break;
+        case 1: // Album
+          playerInfo.albumName = [decoded];
+          print("Album: $decoded");
+          break;
+        case 2: // Title
+          playerInfo.trackName = [decoded];
+          print("Title: $decoded");
+          changed = true;
+          break;
+        case 3: // Duration
+          playerInfo.duration = [decoded];
+          print("Duration: $decoded");
+          changed = true;
+          break;
+      }
+
+      if (changed) {
+        CurrentInfoString.updateTrigger.value++;
       }
     }
 
