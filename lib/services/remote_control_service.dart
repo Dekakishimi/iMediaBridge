@@ -37,9 +37,20 @@ class RemoteControlService {
       c.length == command.length && c.first == command.first);
 
       if (!isSilent) {
+        // Clear previous artwork and reset fetching state
+        final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
+        if (playerInfo != null) {
+          playerInfo.artworkURL = "";
+          CurrentInfoString.updateTrigger.value++;
+        }
+
+        // Set to true to start the 10s timer in the UI
+        CurrentInfoString.isFetching.value = false;
         CurrentInfoString.isFetching.value = true;
+
         await Future.delayed(const Duration(milliseconds: 300));
         await InfoService().writeToAMS();
+
       } else {
         await InfoService().writeToAMS();
       }

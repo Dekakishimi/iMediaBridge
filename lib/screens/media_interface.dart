@@ -22,8 +22,7 @@ class _MediaInterfaceState extends State<MediaInterface> {
   Timer? _ticker;
   double _localElapsed = 0.0;
   int _lastSyncValue = -1; // to ensure the elapsed doesn't stick to 0:00
-  bool _isDragging = false; // flag to track if the slider is being dragged
-
+  Timer? _fetchingTimeout;
 
 
 @override
@@ -33,7 +32,7 @@ void initState() {
   //first time ticker for 1st updated song
   _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
     final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
-    if (playerInfo != null && playerInfo.isPlaying && !_isDragging) {
+    if (playerInfo != null && playerInfo.isPlaying ){
       setState(() {
         _localElapsed += 1;
       });
@@ -44,8 +43,34 @@ void initState() {
       _triggerPlaybackSync();
       InfoService().syncVolumeOnly();
     }
+
   });
+  CurrentInfoString.isFetching.addListener(_handleFetchingTimeout);
 }
+//TIMEOUT HELPER.
+
+  void _handleFetchingTimeout() {
+    if (CurrentInfoString.isFetching.value) {
+      _fetchingTimeout?.cancel();
+      _fetchingTimeout = Timer(const Duration(seconds: 10), () {
+        if (CurrentInfoString.isFetching.value) {
+          // Force unblur and show toast
+          CurrentInfoString.isFetching.value = false;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("TIMEOUT: Unable to find cover art..."),
+                backgroundColor: Colors.redAccent,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+      });
+    } else {
+      _fetchingTimeout?.cancel();
+    }
+  }
 
 // Helper to send just the sync command
 void _triggerPlaybackSync() {
@@ -57,6 +82,8 @@ void _triggerPlaybackSync() {
 
   @override
   void dispose() {
+    CurrentInfoString.isFetching.removeListener(_handleFetchingTimeout);
+    _fetchingTimeout?.cancel();
     _ticker?.cancel(); // Stop the timer when the widget is destroyed
     super.dispose();
   }
@@ -144,27 +171,31 @@ void _triggerPlaybackSync() {
                           padding: const EdgeInsets.symmetric(horizontal: 40),
                           child: AspectRatio(
                             aspectRatio: 1,
-                            child: (fetching || artworkURL.isEmpty)
-                                ? _buildPlaceholder() // Show placeholder while loading
-                                : ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.network(
-                                      artworkURL,
-                                      fit: BoxFit.cover,
-                                      // Show music icon if image fails to load
-                                      errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+                            child: ImageFiltered(
+                              imageFilter: ImageFilter.blur(
+                                sigmaX: fetching ? 8.0 : 0.0,
+                                sigmaY: fetching ? 8.0 : 0.0,
+                              ),
+                              child: (artworkURL.isEmpty)
+                                  ? _buildPlaceholder()
+                                  : ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.network(
+                                        artworkURL,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+                                      ),
                                     ),
-                                  ),
+                            ),
                           ),
                         ),
 
                         const SizedBox(height: 40),
 
-                        // TEXT SECTION (Blurred while loading)
+                        // TEXT SECTION
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 32),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Expanded(
                                 child: ImageFiltered(
@@ -173,31 +204,22 @@ void _triggerPlaybackSync() {
                                     sigmaY: fetching ? 8.0 : 0.0,
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start, // Aligns children to the left
                                     children: [
                                       Text(
-                                        trackTitle, // track title
+                                        trackTitle,
+                                        textAlign: TextAlign.left, // Forces text alignment to the left
                                         style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       Text(
-                                        artistName, // artist name
+                                        artistName,
+                                        textAlign: TextAlign.left, // Forces text alignment to the left
                                         style: TextStyle(fontSize: 22, color: Colors.grey[600]),
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ],
                                   ),
-                                ),
-                              ),
-                              // More Options Button
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  shape: BoxShape.circle,
-                                ),
-                                child: IconButton(
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.more_horiz, size: 24),
                                 ),
                               ),
                             ],
@@ -323,15 +345,15 @@ void _triggerPlaybackSync() {
                       IconButton(
                         onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleRepeat),
                         icon: Icon(
-                          playerInfo?.repeatMode == 1 ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-                          color: playerInfo?.repeatMode != 0 ? Colors.blue : Colors.black45,
+                          playerInfo.repeatMode == 1 ? Icons.repeat_one_rounded : Icons.repeat_rounded,
+                          color: playerInfo.repeatMode != 0 ? Colors.blue : Colors.black45,
                         ),
                       ),
                       IconButton(
                         onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleShuffle),
                         icon: Icon(
                           Icons.shuffle_rounded,
-                          color: playerInfo?.shuffleMode != 0 ? Colors.blue : Colors.black45,
+                          color: playerInfo.shuffleMode != 0 ? Colors.blue : Colors.black45,
                         ),
                       ),
                     ],

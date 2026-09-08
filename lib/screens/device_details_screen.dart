@@ -86,22 +86,30 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
 
               return ListTile(
                 title: Text('Char: ${charUuid.substring(0, 4)}...'),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Properties: ${_getPropertiesString(char.properties)}'),
-                    if (trackTitle.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text('Track Title: $trackTitle', 
-                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
-                      ),
-                    if (previousVal.isNotEmpty) //code for previous value after receiving new values.
-                      Text('Value: $previousVal', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                    if (currentVal.isNotEmpty) //code for the next values received. (mostly after pausing the music client)
-                      Text('Value: $currentVal', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
-                  ],
-                ),
+subtitle: Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text('Properties: ${_getPropertiesString(char.properties)}'),
+
+    // NEW: Volume Trigger Check
+    if (currentVal.startsWith('0,2,0'))
+      const Text(
+        'VOLUME TRIGGER DETECTED...',
+        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 14)
+      ),
+
+    if (trackTitle.isNotEmpty)
+      Padding(
+        padding: const EdgeInsets.only(top: 4.0),
+        child: Text('Track Title: $trackTitle',
+          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 16)),
+      ),
+    if (previousVal.isNotEmpty)
+      Text('Value: $previousVal', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+    if (currentVal.isNotEmpty)
+      Text('Value: $currentVal', style: const TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold)),
+  ],
+),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [

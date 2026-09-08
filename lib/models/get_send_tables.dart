@@ -82,7 +82,17 @@ class RemoteCommands {
   static const List<int> rewind = [10];
 
   // commands that should not trigger blur of image and text.
-  static const List<List<int>> silentCommands = [[7], [8], [0], [1], [2]];
+  static const List<List<int>> silentCommands = [
+    [7], // cycle repeat
+    [8], // cycle Shuffle
+    [0], // play
+    [1], // pause
+    [2], // toggle
+    [9], // forward
+    [10], // rewind
+    [5], // volumeUp
+    [6], // volumeDown
+  ];
 }
 
 
