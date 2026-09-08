@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../main.dart';
 import 'auto_subscribe.dart';
 import 'get_info.dart';
 import '../models/current_info.dart';
@@ -191,5 +192,21 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
       // Auto-trigger a refresh if anything actually changed
       handleUpdate();
     }
+
+    // When Title/Artist/Art changes:
+    audioHandler.updateMetadata(
+      title: playerInfo.trackName.first.toString(),
+      artist: playerInfo.artistName.first.toString(),
+      album: playerInfo.albumName.first.toString(),
+      duration: Duration(seconds: (double.tryParse(playerInfo.duration.first.toString()) ?? 0).toInt()),
+      artworkUrl: playerInfo.artworkURL,
+    );
+
+// When Playback Info changes:
+    audioHandler.updatePlaybackState(
+      playerInfo.isPlaying,
+      Duration(seconds: playerInfo.elapsedTime.toInt()),
+    );
+
   }
 }
