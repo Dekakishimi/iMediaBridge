@@ -1,58 +1,55 @@
+// lib/services/get_info.dart
 import 'dart:convert';
-import '../models/current_info.dart';
-import 'ble_controller.dart';
-import '../models/get_tables.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'ble_controller.dart';
+import '../models/get_send_tables.dart';
+import '../models/current_info.dart';
 
 class InfoService {
   final BleController _bleController = BleController();
+  static BluetoothCharacteristic? _cachedUpdateChar;
 
-  /// Simplified function to write to AMS without required parameters
+  // IMPORTANT: For SUBSCRIPTION, write to 2F7CABCE
+  Future<void> _ensureUpdateChar() async {
+    if (_cachedUpdateChar != null) return;
+    final device = _bleController.connectedDevice;
+    if (device == null) return;
+
+    final services = await device.discoverServices();
+    for (var service in services) {
+      for (var char in service.characteristics) {
+        if (char.uuid.toString().toUpperCase().contains('2F7CABCE')) {
+          _cachedUpdateChar = char;
+          return;
+        }
+      }
+    }
+  }
+
   Future<void> writeToAMS() async {
-      // 1. Get the connected device from your controller
-      final device = _bleController.connectedDevice;
-      if (device == null) return;
+    await _ensureUpdateChar();
+    if (_cachedUpdateChar == null) return;
 
-      // 2. Find the services already discovered on the device
-      final services = await device.discoverServices();
+    final List<CommandBytes> trackCommands = GetCommandsForAMS.registry.values.toList();
 
-      // 3. Find the specific AMS Remote Command characteristic
-      // (UUID: 9B3C81D8-6351-4A5E-8F09-70FD23ED5FD3)
-      BluetoothCharacteristic? amsRemoteChar;
+    for (final command in trackCommands) {
+      await _bleController.writeCharacteristic(_cachedUpdateChar!, command.bytes);
+      await Future.delayed(const Duration(milliseconds: 50));
+    }
+  }
 
-      for (var service in services) {
-        for (var char in service.characteristics) {
-          if (char.uuid.toString().toUpperCase().contains('2F7CABCE')) {
-            amsRemoteChar = char;
-            break;
-          }
-        }
-      }
-      if (amsRemoteChar == null) {
-        print("AMS Characteristic not found!");
-        return;
-      }
+  Future<void> syncPlaybackOnly() async {
+    await _ensureUpdateChar();
+    if (_cachedUpdateChar != null) {
+      await _bleController.writeCharacteristic(_cachedUpdateChar!, [0, 1]);
+    }
+  }
 
-      try {
-        // User will implement custom logic here
-        print("writeToAMS triggered");
-
-        final List<CommandBytes> trackCommands = GetCommandsForAMS.registry
-            .entries // gets all track related bytes first
-            .where((entry) =>
-        entry.key.contains('Track') || entry.key.contains('Artist') ||
-            entry.key.contains('Album') || entry.key.contains('Duration'))
-            .map((entry) => entry.value)
-            .toList();
-
-        for (final command in trackCommands) {
-          await _bleController.writeCharacteristic(
-              amsRemoteChar, command.bytes);
-          await Future.delayed(const Duration(
-              milliseconds: 100)); //delay to catch up with responses
-        }
-      } catch (e) {
-        print("Error in writeToAMS: $e");
-      }
+  Future<void> syncVolumeOnly() async {
+    await _ensureUpdateChar();
+    if (_cachedUpdateChar != null) {
+      await _bleController.writeCharacteristic(_cachedUpdateChar!, [0, 2]);
+      print("Explicit volume refresh requested.");
+    }
   }
 }

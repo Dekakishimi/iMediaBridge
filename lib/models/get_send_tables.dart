@@ -55,4 +55,34 @@ class GetCommandsForAMS {
   };
 }
 
+class RemoteCommands {
+
+  // Lists of bytes for the remoteCommands of the Apple Media Services.
+  // I wont put comments for them since its pretty self-explanatory lol.
+  static const List<int> play = [0];
+
+  static const List<int> pause = [1];
+
+  static const List<int> toggle = [2]; //this should only be used if the app doesn't support play/pause.
+
+  static const List<int> next = [3];
+
+  static const List<int> previous = [4];
+
+  static const List<int> volumeUp = [5];
+
+  static const List<int> volumeDown = [6];
+
+  static const List<int> cycleRepeat = [7];
+
+  static const List<int> cycleShuffle = [8];
+
+  static const List<int> forward = [9];
+
+  static const List<int> rewind = [10];
+
+  // commands that should not trigger blur of image and text.
+  static const List<List<int>> silentCommands = [[7], [8], [0], [1], [2]];
+}
+
 

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'get_info.dart';
 import '../models/current_info.dart';
+import 'artwork_service.dart';
 
 class BleController {
   //memory leak fix
@@ -136,6 +137,37 @@ class BleController {
     if (rawValue.length <= 3) return; //reject the value if its only 2 bytes or less
 
     // updates regardless of value
+
+    if (rawValue[0] == 1) { // Entity 1 (Queue)
+      String info = utf8.decode(rawValue.skip(3).toList());
+      int mode = int.tryParse(info) ?? 0;
+
+      final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
+      if (playerInfo == null) return;
+
+      if (rawValue[0] == 0 && rawValue[1] == 2) { // Entity 0, Attribute 2: Volume
+        print("Volume Received!");
+
+        // SKIP 3 BYTES of header before decoding the string
+        String curVol = utf8.decode(rawValue.skip(3).toList(), allowMalformed: true).trim();
+
+        // Parse the remaining string (e.g., "0.65")
+        double? parsedVol = double.tryParse(curVol);
+        if (parsedVol != null) {
+          playerInfo.volume = parsedVol;
+          print("New Volume Level: ${playerInfo.volume}");
+          CurrentInfoString.updateTrigger.value++;
+        }
+      }
+
+      if (rawValue[1] == 2) { // Attribute 2: Shuffle Mode
+        playerInfo.shuffleMode = mode;
+      } else if (rawValue[1] == 3) { // Attribute 3: Repeat Mode
+        playerInfo.repeatMode = mode;
+      }
+      CurrentInfoString.updateTrigger.value++;
+    }
+
     if (rawValue[0] == 2) { // Entity 2 (TrackInfo)
       String decoded = utf8.decode(rawValue.skip(3).toList(), allowMalformed: true).trim();
       decoded = decoded.replaceAll(RegExp(r'\x00'), '');
@@ -148,6 +180,7 @@ class BleController {
         case 0: // Artist
           playerInfo.artistName = [decoded];
           print("Artist Name: $decoded");
+          print("IMPORTANT: Music has been detected playing as has been updated!");
           changed = true;
           break;
         case 1: // Album
@@ -158,6 +191,18 @@ class BleController {
           playerInfo.trackName = [decoded];
           print("Title: $decoded");
           changed = true;
+
+          // Album Art (Uses the title)
+          String artist = playerInfo.artistName.isNotEmpty ? playerInfo.artistName.first.toString() : "";
+          fetchArtwork(artist, decoded).then((url) {
+          if (url.isNotEmpty) {
+            playerInfo.artworkURL = url;
+            CurrentInfoString.updateTrigger.value++; // Trigger UI update
+            print("Album art function executed.");
+            CurrentInfoString.isFetching.value = false;
+            print("Metadata fetching complete, blur should stop.");
+            }
+          });
           break;
         case 3: // Duration
           playerInfo.duration = [decoded];
@@ -167,6 +212,21 @@ class BleController {
       }
 
       if (changed) {
+        CurrentInfoString.updateTrigger.value++;
+      }
+    }
+
+    if (rawValue[0] == 0 && rawValue[1] == 1) { // Entity 0, Attribute 1)
+
+      final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
+      if (playerInfo == null) return;
+
+      String info = utf8.decode(rawValue.skip(3).toList());
+      List<String> parts = info.split(',');
+      if (parts.length >= 3) {
+        playerInfo.isPlaying = parts[0] == "1"; // 1 = Playing
+        double timeFromAMD = double.tryParse(parts[2]) ?? 0.0;
+        playerInfo.elapsedTime = timeFromAMD + 0.5;
         CurrentInfoString.updateTrigger.value++;
       }
     }
