@@ -145,17 +145,19 @@ class BleController {
       final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
       if (playerInfo == null) return;
 
-      if (rawValue[0] == 0 && rawValue[1] == 2) { // Entity 0, Attribute 2: Volume
-        print("Volume Received!");
+      if (rawValue[0] == 0 && rawValue[1] == 2) {
+        // 1. Skip header and decode
+        String curVol = utf8.decode(rawValue.skip(3).toList(), allowMalformed: true);
 
-        // SKIP 3 BYTES of header before decoding the string
-        String curVol = utf8.decode(rawValue.skip(3).toList(), allowMalformed: true).trim();
+        // 2. IMPORTANT: Remove null bytes (\x00) before trimming
+        curVol = curVol.replaceAll(RegExp(r'\x00'), '').trim();
 
-        // Parse the remaining string (e.g., "0.65")
+        print("Cleaned Volume String: '$curVol'");
+
+        // 3. Parse now that the string is clean numeric text
         double? parsedVol = double.tryParse(curVol);
         if (parsedVol != null) {
           playerInfo.volume = parsedVol;
-          print("New Volume Level: ${playerInfo.volume}");
           CurrentInfoString.updateTrigger.value++;
         }
       }

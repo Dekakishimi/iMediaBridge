@@ -30,10 +30,12 @@ class InfoService {
     await _ensureUpdateChar();
     if (_cachedUpdateChar == null) return;
 
-    final List<CommandBytes> trackCommands = GetCommandsForAMS.registry.values.toList();
+    final List<CommandBytes> trackCommands = GetCommandsForAMS.registry.values
+        .toList();
 
     for (final command in trackCommands) {
-      await _bleController.writeCharacteristic(_cachedUpdateChar!, command.bytes);
+      await _bleController.writeCharacteristic(
+          _cachedUpdateChar!, command.bytes);
       await Future.delayed(const Duration(milliseconds: 50));
     }
   }
@@ -48,8 +50,17 @@ class InfoService {
   Future<void> syncVolumeOnly() async {
     await _ensureUpdateChar();
     if (_cachedUpdateChar != null) {
-      await _bleController.writeCharacteristic(_cachedUpdateChar!, [0, 2]);
-      print("Explicit volume refresh requested.");
+      try {
+        // 1. Send [0, 1] (Playback Info) to wake up the stream
+        await _bleController.writeCharacteristic(_cachedUpdateChar!, [0, 1]);
+        print("Two-step volume sync initiated.");
+      } catch (e) {
+        print("Volume sync failed: $e");
+      }
     }
   }
 }
+
+// A QUIRK IVE FOUND OUT THE APPLE MEDIA SERVICE FOR VOLUME, IS THAT YOU NEED
+// TO TRIGGER A 0,1 WRITE BEFORE YOU SEND THE 0,2 WRITE FOR THE VOLUME...
+// (APPLE ENGINEERS..  I HATE YOU...)
