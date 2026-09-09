@@ -4,7 +4,10 @@ import 'dart:io';
 
 Future<String> fetchArtwork(String artist, String track) async {
   try {
-    final query = Uri.encodeComponent('$artist $track');
+    print(track);
+    print(artist);
+
+    final query = Uri.encodeComponent('$track by $artist');
     final url = Uri.parse('https://itunes.apple.com/search?term=$query&entity=song&limit=1');
 
     final client = HttpClient();

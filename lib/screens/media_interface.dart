@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mediabridge/models/current_info.dart';
+import '/models/current_info.dart';
 import 'dart:async';
 import '../models/get_send_tables.dart';
 import '../services/get_info.dart';
@@ -20,8 +20,8 @@ class _MediaInterfaceState extends State<MediaInterface> {
 
   //timer for scrubber
   Timer? _ticker;
-  double _localElapsed = 0.0;
-  int _lastSyncValue = -1; // to ensure the elapsed doesn't stick to 0:00
+  double _localElapsed = -1.0;
+  int _lastSyncValue = 0; // to ensure the elapsed doesn't stick to 0:00
   Timer? _fetchingTimeout;
 
 
@@ -30,17 +30,17 @@ void initState() {
   super.initState();
 
   //first time ticker for 1st updated song
-  _ticker = Timer.periodic(const Duration(seconds: 1), (timer) {
+  _ticker = Timer.periodic(const Duration(milliseconds: 200), (timer) {
     final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
     if (playerInfo != null && playerInfo.isPlaying ){
       setState(() {
-        _localElapsed += 1;
+        _localElapsed += 0.2;
       });
     }
 
    //every 5 second refresher, fixing the 1-2 second delay.
-    if (timer.tick % 5 == 0) {
-      _triggerPlaybackSync();
+    if (timer.tick % 25 == 0) {
+      _triggerPlaybackDelaySync();
       InfoService().syncVolumeOnly();
     }
 
@@ -73,11 +73,15 @@ void initState() {
   }
 
 // Helper to send just the sync command
-void _triggerPlaybackSync() {
-  // Use your existing InfoService
-  InfoService().syncPlaybackOnly();
-  // Note: Since writeToAMS now includes 'Playback', it will refresh the time.
+Future<void> _triggerPlaybackDelaySync() async {
   print("Fixing delay...");
+  isFixingDelay = 1;
+  // Use your existing InfoService
+  await InfoService().syncPlaybackOnly();
+  await Future.delayed(const Duration(milliseconds: 500)); //wait till the thing finishes processing.
+  isFixingDelay = 0;
+  // Note: Since writeToAMS now includes 'Playback', it will refresh the time.
+
 }
 
   @override
@@ -117,9 +121,20 @@ void _triggerPlaybackSync() {
 
         // Extract all data (to avoid null pointer.)
         if (playerInfo != null) {
-          // Sync the local timer with the double from BLE
+          // 1. Check if a new BLE update has arrived
           if (_lastSyncValue != triggerValue) {
-            _localElapsed = playerInfo.elapsedTime;
+
+            // 2. Calculate the difference between local time and iPhone time
+            double difference = (playerInfo.elapsedTime - _localElapsed).abs();
+
+            // 3. Only jump if the drift is more than 0.5 seconds
+            if (difference > 0.05) {
+              print("Drift detected (${difference.toStringAsFixed(2)}s). Correcting...");
+              _localElapsed = playerInfo.elapsedTime;
+            } else {
+              print("Sync ignored: Drift is negligible (${difference.toStringAsFixed(2)}s).");
+            }
+            // Always update the sync value so we don't re-run this logic until the next packet
             _lastSyncValue = triggerValue;
           }
         }
@@ -235,35 +250,60 @@ void _triggerPlaybackSync() {
 
                 // Scrubber (Progress Bar)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    children: [
-                      SliderTheme(
-                        data: SliderTheme.of(context).copyWith(
-                          trackHeight: 4,
-                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 14),
-                          activeTrackColor: Colors.black87,
-                          inactiveTrackColor: Colors.grey[300],
-                          thumbColor: Colors.black87,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    // 1. The Progress Bar (Using a custom Slider for the "Dot" and "Active Line" look)
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        trackHeight: 4,
+                        thumbShape: const RoundSliderThumbShape(
+                          enabledThumbRadius: 0, // Hidden thumb like modern iOS
+                          disabledThumbRadius: 0,
                         ),
-                        child: LinearProgressIndicator(
-                          value: (_localElapsed / totalDuration).clamp(0.0, 1.0),
-                        ),
+                        overlayShape: SliderComponentShape.noOverlay,
+                        activeTrackColor: Colors.black.withValues(alpha: 0.8),
+                        inactiveTrackColor: Colors.black.withValues(alpha: 0.1),
+                        // If you want a thumb while dragging, you can set radius to 6
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(_formatDuration(_localElapsed), style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                            Text(_formatDuration(totalDuration), style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                          ],
-                        ),
+                      child: Slider(
+                        value: (_localElapsed / totalDuration).clamp(0.0, 1.0),
+                        onChanged: null, // Set to null to make it read-only for now
                       ),
-                    ],
-                  ),
+                    ),
+
+                    const SizedBox(height: 8),
+
+                    // 2. The Timing Text (Modern, spaced typography)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _formatDuration(_localElapsed),
+                            style: TextStyle(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              fontFeatures: const [FontFeature.tabularFigures()], // Fixed width numbers!
+                            ),
+                          ),
+                          Text(
+                            "-${_formatDuration(totalDuration - _localElapsed)}", // Countdown style
+                            style: TextStyle(
+                              color: Colors.black.withValues(alpha: 0.5),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
+              ),
 
                 const SizedBox(height: 10),
 
