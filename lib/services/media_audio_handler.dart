@@ -45,7 +45,9 @@ class MediaBridgeAudioHandler extends BaseAudioHandler with SeekHandler {
       artist: artist,
       album: album,
       duration: duration,
-      artUri: artworkUrl != null ? Uri.parse(artworkUrl) : null,
+      artUri: (artworkUrl != null && artworkUrl.isNotEmpty)
+          ? Uri.parse(artworkUrl)
+          : null,
     ));
   }
 

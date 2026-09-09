@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+int isFixingDelay = 0; // used for duplicate call for fixing delay FIX.
+
 class MediaPlayerInfo {
   List<Object>
       trackName,

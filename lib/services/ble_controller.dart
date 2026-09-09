@@ -149,33 +149,45 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
       if (decoded.isEmpty) return;
 
       bool changed = false;
-      switch (rawValue[1]) {
-        case 0: // Artist
-          playerInfo.artistName = [decoded];
-          changed = true;
-          break;
-        case 1: // Album
-          playerInfo.albumName = [decoded];
-          break;
-        case 2: // Title
-          playerInfo.trackName = [decoded];
-          changed = true;
 
-          // Trigger External Artwork Search
-          String artist = playerInfo.artistName.isNotEmpty ? playerInfo.artistName.first.toString() : "";
-          fetchArtwork(artist, decoded).then((url) {
-            if (url.isNotEmpty) {
-              playerInfo.artworkURL = url;
-              CurrentInfoString.updateTrigger.value++;
-              CurrentInfoString.isFetching.value = false; // End loading state
-            }
-          });
+      switch (rawValue[1]) {
+        case 0: // Artist Name
+          String oldArtist = playerInfo.artistName.isNotEmpty ? playerInfo.artistName.first.toString() : "";
+          if (oldArtist != decoded) {
+            // DETECTED CHANGE: Begin Blur
+            CurrentInfoString.isFetching.value = true;
+            playerInfo.artistName = [decoded];
+            changed = true;
+          }
           break;
+
+        case 2: // Track Title
+          String oldTitle = playerInfo.trackName.isNotEmpty ? playerInfo.trackName.first.toString() : "";
+          if (oldTitle != decoded) {
+            // DETECTED CHANGE: Begin Blur
+            CurrentInfoString.isFetching.value = true;
+            playerInfo.trackName = [decoded];
+            changed = true;
+
+            // Trigger External Artwork Search
+            String artist = playerInfo.artistName.isNotEmpty ? playerInfo.artistName.first.toString() : "";
+            fetchArtwork(artist, decoded).then((url) {
+              if (url.isNotEmpty) {
+                playerInfo.artworkURL = url;
+                CurrentInfoString.updateTrigger.value++;
+                // END BLUR: Once artwork is here
+                CurrentInfoString.isFetching.value = false;
+              }
+            });
+          }
+          break;
+
         case 3: // Duration
           playerInfo.duration = [decoded];
           changed = true;
           break;
       }
+
       if (changed) CurrentInfoString.updateTrigger.value++;
     }
 
@@ -183,7 +195,7 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
     String formattedValue = rawValue.join(',');
     String existingCurrent = charValues[charUuid]?['current'] ?? '';
 
-    if (existingCurrent != formattedValue) {
+    if (existingCurrent != formattedValue && isFixingDelay == 0) {
       charValues[charUuid] = {
         'prev': existingCurrent,
         'current': formattedValue,
@@ -193,16 +205,17 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
       handleUpdate();
     }
 
+    //  FOR NOTIF BTW:
     // When Title/Artist/Art changes:
     audioHandler.updateMetadata(
-      title: playerInfo.trackName.first.toString(),
-      artist: playerInfo.artistName.first.toString(),
-      album: playerInfo.albumName.first.toString(),
-      duration: Duration(seconds: (double.tryParse(playerInfo.duration.first.toString()) ?? 0).toInt()),
+      title: playerInfo.trackName.isNotEmpty ? playerInfo.trackName.first.toString() : "Unknown",
+      artist: playerInfo.artistName.isNotEmpty ? playerInfo.artistName.first.toString() : "Unknown",
+      album: playerInfo.albumName.isNotEmpty ? playerInfo.albumName.first.toString() : "Unknown",
+      duration: Duration(seconds: (playerInfo.duration.isNotEmpty ? double.tryParse(playerInfo.duration.first.toString()) ?? 0 : 0).toInt()),
       artworkUrl: playerInfo.artworkURL,
     );
 
-// When Playback Info changes:
+    // When Playback Info changes:
     audioHandler.updatePlaybackState(
       playerInfo.isPlaying,
       Duration(seconds: playerInfo.elapsedTime.toInt()),

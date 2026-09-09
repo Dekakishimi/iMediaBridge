@@ -1,6 +1,6 @@
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
-import 'package:mediabridge/services/media_audio_handler.dart';
+import '/services/media_audio_handler.dart';
 import 'screens/scan_screen.dart';
 
 late MediaBridgeAudioHandler audioHandler;

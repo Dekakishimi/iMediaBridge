@@ -1,8 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="MediaBridge"
+        android:label="iMediaBridge"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
 
         <service android:name="com.ryanheise.audioservice.AudioService"
             android:exported="true"

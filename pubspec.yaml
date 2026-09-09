@@ -18,6 +18,18 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
 
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.14.4 # Use the latest version
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+
+
+
 environment:
   sdk: ^3.12.2
 
@@ -38,9 +50,9 @@ dependencies:
   flutter_blue_plus: 2.3.12
   permission_handler: ^13.0.2
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+
+
+
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
