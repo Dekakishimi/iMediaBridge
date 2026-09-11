@@ -21,7 +21,7 @@ class _MediaInterfaceState extends State<MediaInterface> {
 
   //timer for scrubber
   Timer? _ticker;
-  double _localElapsed = -1.0;
+  double _localElapsed = 0.0;
   int _lastSyncValue = 0; // to ensure the elapsed doesn't stick to 0:00
   Timer? _fetchingTimeout;
 
@@ -121,7 +121,7 @@ Future<void> _triggerPlaybackDelaySync() async {
         String artworkURL = playerInfo?.artworkURL ?? "";
 
         // Extract all data (to avoid null pointer.)
-        if (playerInfo != null) {
+        if (playerInfo != null && !CurrentInfoString.isFetching.value) {
           // 1. Check if a new BLE update has arrived
           if (_lastSyncValue != triggerValue) {
 
@@ -129,7 +129,7 @@ Future<void> _triggerPlaybackDelaySync() async {
             double difference = (playerInfo.elapsedTime - _localElapsed).abs();
 
             // 3. Only jump if the drift is more than 0.5 seconds
-            if (difference > 0.05) {
+            if (difference > 0.5 || playerInfo.elapsedTime < 1.0) {
               print("Drift detected (${difference.toStringAsFixed(2)}s). Correcting...");
               _localElapsed = playerInfo.elapsedTime;
             } else {

@@ -17,6 +17,8 @@ class MediaPlayerInfo {
       int shuffleMode;
       int repeatMode;
       double volume;
+      bool pendingArtistChange = false;
+      bool pendingTitleChange = false;
 
   MediaPlayerInfo({
     required this.trackName,
@@ -32,6 +34,8 @@ class MediaPlayerInfo {
     required this.shuffleMode,
     required this.repeatMode,
     required this.volume,
+    required this. pendingArtistChange ,
+    required this. pendingTitleChange
 
   });
 }
@@ -55,7 +59,9 @@ class CurrentInfoString {
         artworkURL: "",
         shuffleMode: 0,
         repeatMode: 0,
-        volume: 0.0
+        volume: 0.0,
+        pendingArtistChange: false,
+        pendingTitleChange: false,
     ),
   };
 }

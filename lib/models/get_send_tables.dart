@@ -85,6 +85,8 @@ class RemoteCommands {
   static const List<List<int>> silentCommands = [
     [7], // cycle repeat
     [8], // cycle Shuffle
+    [3], //next
+    [4], //previous
     [0], // play
     [1], // pause
     [2], // toggle

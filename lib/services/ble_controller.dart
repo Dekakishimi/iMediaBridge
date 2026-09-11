@@ -12,6 +12,8 @@ class BleController {
   factory BleController() => _instance;
   BleController._internal();
 
+  Timer? _artworkDebounceTimer; //timer for artwork fix.
+
   BluetoothDevice? connectedDevice;
   final Map<String, StreamSubscription> _notificationSubscriptions = {};
 
@@ -20,6 +22,17 @@ class BleController {
 
   // Flag to prevent recursive infinite loops during metadata updates
   bool _isUpdating = false;
+
+  // --- NOTIFICATION METHODS ---
+  void _updateAndroidNotification(MediaPlayerInfo info, String title, String artist, String url) {
+    audioHandler.updateMetadata(
+      title: title,
+      artist: artist,
+      album: info.albumName.isNotEmpty ? info.albumName.first.toString() : "Unknown",
+      duration: Duration(seconds: (info.duration.isNotEmpty ? double.tryParse(info.duration.first.toString()) ?? 0 : 0).toInt()),
+      artworkUrl: url,
+    );
+  }
 
   // --- CORE BLUETOOTH METHODS ---
 
@@ -151,7 +164,7 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
         if (parts.length >= 3) {
           playerInfo.isPlaying = parts[0] == "1";
           double timeFromAMD = double.tryParse(parts[2]) ?? 0.0;
-          playerInfo.elapsedTime = timeFromAMD; // Latency compensation
+          playerInfo.elapsedTime = timeFromAMD + 0.8; // Latency compensation
           CurrentInfoString.updateTrigger.value++;
         }
       }
@@ -175,47 +188,55 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
       decoded = decoded.replaceAll(RegExp(r'\x00'), '');
       if (decoded.isEmpty) return;
 
-      bool changed = false;
+      bool textChanged = false;
 
       switch (rawValue[1]) {
         case 0: // Artist Name
-          String oldArtist = playerInfo.artistName.isNotEmpty ? playerInfo.artistName.first.toString() : "";
-          if (oldArtist != decoded) {
-            // DETECTED CHANGE: Begin Blur
-            CurrentInfoString.isFetching.value = true;
+          if (playerInfo.artistName.isEmpty || playerInfo.artistName.first != decoded) {
             playerInfo.artistName = [decoded];
-            changed = true;
+            textChanged = true;
           }
           break;
 
         case 2: // Track Title
-          String oldTitle = playerInfo.trackName.isNotEmpty ? playerInfo.trackName.first.toString() : "";
-          if (oldTitle != decoded) {
-            // DETECTED CHANGE: Begin Blur
-            CurrentInfoString.isFetching.value = true;
+          if (playerInfo.trackName.isEmpty || playerInfo.trackName.first != decoded) {
             playerInfo.trackName = [decoded];
-            changed = true;
-
-            // Trigger External Artwork Search
-            String artist = playerInfo.artistName.isNotEmpty ? playerInfo.artistName.first.toString() : "";
-            fetchArtwork(artist, decoded).then((url) {
-              if (url.isNotEmpty) {
-                playerInfo.artworkURL = url;
-                CurrentInfoString.updateTrigger.value++;
-                // END BLUR: Once artwork is here
-                CurrentInfoString.isFetching.value = false;
-              }
-            });
+            textChanged = true;
           }
           break;
 
         case 3: // Duration
           playerInfo.duration = [decoded];
-          changed = true;
           break;
       }
 
-      if (changed) CurrentInfoString.updateTrigger.value++;
+      if (textChanged) {
+        // 1. UI Feedback: Clear art and show blur immediately
+        playerInfo.artworkURL = "";
+        CurrentInfoString.isFetching.value = true;
+        CurrentInfoString.updateTrigger.value++;
+
+        // 2. Restart the "Settling" timer
+        _artworkDebounceTimer?.cancel();
+        _artworkDebounceTimer = Timer(const Duration(milliseconds: 600), () {
+
+          // 3. This code runs only after BLE packets have stopped arriving
+          String artist = playerInfo.artistName.isNotEmpty ? playerInfo.artistName.first.toString() : "";
+          String title = playerInfo.trackName.isNotEmpty ? playerInfo.trackName.first.toString() : "";
+
+          if (title.isNotEmpty) {
+            print("Metadata settled. Fetching artwork for: $title by $artist");
+            fetchArtwork(artist, title).then((url) {
+              if (url.isNotEmpty) playerInfo.artworkURL = url;
+
+              // Update notification and clean up
+              _updateAndroidNotification(playerInfo, title, artist, url);
+              CurrentInfoString.isFetching.value = false;
+              CurrentInfoString.updateTrigger.value++;
+            });
+          }
+        });
+      }
     }
 
     // 3. Update Debug Map
