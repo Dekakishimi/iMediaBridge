@@ -37,7 +37,7 @@ class MediaBridgeAudioHandler extends BaseAudioHandler with SeekHandler {
     required String artist,
     required String album,
     required Duration duration,
-    String? artworkUrl,
+    required String? artworkUrl,
   }) {
     mediaItem.add(MediaItem(
       id: 'mediabridge_current',
