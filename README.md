@@ -29,6 +29,8 @@ This table is not complete, if you would like to help, please considering writin
 
 Both device must have their bluetooth turned on at all times for this app to work.
 
+I forgot to add the loop for these WEBP btw. so um- ya gonna have to refresh the website to see it :).
+
 How to connect.
 
     1. Pair your phone to your Apple device.
