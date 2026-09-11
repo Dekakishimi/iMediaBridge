@@ -39,7 +39,7 @@ void initState() {
     }
 
    //every 5 second refresher, fixing the 1-2 second delay.
-    if (timer.tick % 25 == 0) {
+    if (timer.tick % 50 == 0) {
       _triggerPlaybackDelaySync();
       InfoService().syncVolumeOnly();
     }

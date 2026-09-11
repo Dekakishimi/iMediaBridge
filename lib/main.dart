@@ -13,8 +13,9 @@ Future<void> main() async {
     builder: () => MediaBridgeAudioHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'idv.kii.mediabridge.channel.audio',
-      androidNotificationChannelName: 'MediaBridge Playback',
+      androidNotificationChannelName: 'iMediaBridge Playback',
       androidNotificationOngoing: true,
+      androidNotificationIcon: 'mipmap/launcher_icon',
     ),
   );
 

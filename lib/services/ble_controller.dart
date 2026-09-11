@@ -124,7 +124,7 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
         if (parts.length >= 3) {
           playerInfo.isPlaying = parts[0] == "1";
           double timeFromAMD = double.tryParse(parts[2]) ?? 0.0;
-          playerInfo.elapsedTime = timeFromAMD + 0.5; // Latency compensation
+          playerInfo.elapsedTime = timeFromAMD; // Latency compensation
           CurrentInfoString.updateTrigger.value++;
         }
       }
