@@ -5,6 +5,8 @@ An application that can control & bridge media information (Currently Playing Tr
 
 NOTE: Currently the app uses itunes lookup for the Album Art. Thus, the cover might be incorrect...
 
+NOTE2: There is a bug where the Album Art does not change when the app is in the foreground.
+
 
 ## Compatibility
 
