@@ -6,6 +6,7 @@ import 'auto_subscribe.dart';
 import 'get_info.dart';
 import '../models/current_info.dart';
 import 'artwork_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class BleController {
   static final BleController _instance = BleController._internal();
@@ -22,6 +23,21 @@ class BleController {
 
   // Flag to prevent recursive infinite loops during metadata updates
   bool _isUpdating = false;
+
+  // --- BATTERY EXEMPTOR ---
+
+  Future<void> requestBatteryOptimizationOff() async {
+    // 1. Check if we already have the permission
+    var status = await Permission.ignoreBatteryOptimizations.status;
+
+    if (status.isDenied) {
+      print("Requesting to ignore battery optimizations...");
+      // 2. This will open the system dialog asking the user to "Allow"
+      await Permission.ignoreBatteryOptimizations.request();
+    } else {
+      print("Battery optimizations already disabled.");
+    }
+  }
 
   // --- NOTIFICATION METHODS ---
   void _updateAndroidNotification(MediaPlayerInfo info, String title, String artist, String url) {

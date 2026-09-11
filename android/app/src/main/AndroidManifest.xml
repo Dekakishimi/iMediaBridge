@@ -63,6 +63,9 @@
      Set android:required="true" if bluetooth is necessary -->
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
+    <!-- Asks for ignore battery optimization permission -->>
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Needed for the album art service to work -->
     <uses-permission android:name="android.permission.INTERNET" />
 
