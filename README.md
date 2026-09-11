@@ -1,7 +1,7 @@
 
 # iMediaBrige
 
-An application that can bridge media information (Currently Playing Track, Artist, etc...) from an iOS/iPadOS device to an Android device.
+An application that can control & bridge media information (Currently Playing Track, Artist, etc...) from an iOS/iPadOS device to an Android device.
 
 NOTE: Currently the app uses itunes lookup for the Album Art. Thus, the cover might be incorrect...
 
