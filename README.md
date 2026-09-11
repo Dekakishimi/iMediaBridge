@@ -33,9 +33,9 @@ How to connect.
 
     1. Pair your phone to your Apple device.
 
-//image (In Progress sorry ;-;)
+![How to pair your device](Demos/iPadView.webp)
 
     2. Connect on the app.
 
-//image (In Progress sorry ;-;)
+![How to connect on the app](Demos/PhoneView.webp)
 
