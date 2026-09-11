@@ -33,9 +33,9 @@ How to connect.
 
     1. Pair your phone to your Apple device.
 
-![How to pair your device](./Demos/iPadView.webp)
+<img src="https://github.com/Dekakishimi/iMediaBridge/blob/master/Demos/iPadView.webp" alt="How to pair your device." width="100%">
 
     2. Connect on the app.
 
-![How to connect on the app](./Demos/PhoneView.webp)
+<img src="https://github.com/Dekakishimi/iMediaBridge/blob/master/Demos/PhoneView.webp" alt="How to connect on the app." width="100%">
 
