@@ -41,8 +41,35 @@ class BleController {
 
   Future<void> connectToDevice(BluetoothDevice device) async {
     await stopScan();
-    await device.connect(autoConnect: false, timeout: const Duration(seconds: 10), license: License.nonprofit);
-    connectedDevice = device;
+
+    try {
+      // Attempt connection with a timeout
+      await device.disconnect();
+      await device.connect(
+          autoConnect: false,
+          timeout: const Duration(seconds: 10),
+          license: License.nonprofit
+      );
+      connectedDevice = device;
+      print("Successfully connected to ${device.remoteId}");
+
+    } catch (e) {
+      print("Connection error: $e");
+
+      // Check if it's the 133 error (or any other GATT failure)
+      if (e.toString().contains('133') || e.toString().contains('GATT_ERROR')) {
+        print("GATT 133 detected. Cleaning up and closing GATT...");
+
+        // THIS IS THE FIX: Fully disconnect and close the GATT bridge
+        await device.disconnect();
+
+        // Optional: Wait a moment before allowing the user to try again
+        await Future.delayed(const Duration(milliseconds: 500));
+      }
+
+      // Re-throw so the UI can show the error snackbar
+      rethrow;
+    }
   }
 
 Future<void> disconnectDevice(BluetoothDevice device) async {

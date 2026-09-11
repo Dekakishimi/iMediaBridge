@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/ble_controller.dart';
 import '/models/current_info.dart';
 import 'dart:async';
 import '../models/get_send_tables.dart';
@@ -157,6 +158,33 @@ Future<void> _triggerPlaybackDelaySync() async {
         // Basic style layout
         return Scaffold(
           backgroundColor: Colors.white,
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.close, color: Colors.black), // "X" icon to close
+                onPressed: () async {
+                  final controller = BleController();
+                  final device = controller.connectedDevice;
+
+                  if (device != null) {
+                    print("Disconnecting and exiting...");
+                    // 1. Clean up BLE connection
+                    await controller.disconnectDevice(device);
+                  }
+
+                  // 2. Go back to scan screen
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+              title: const Text(
+                  "Now Playing",
+                  style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600)
+              ),
+              centerTitle: true,
+            ),
           body: SafeArea(
             child: Column(
               children: [

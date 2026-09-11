@@ -91,7 +91,7 @@ subtitle: Column(
   children: [
     Text('Properties: ${_getPropertiesString(char.properties)}'),
 
-    // NEW: Volume Trigger Check
+    //Volume Trigger Check
     if (currentVal.startsWith('0,2,0'))
       const Text(
         'VOLUME TRIGGER DETECTED...',
@@ -197,7 +197,7 @@ void _showWriteDialog(BluetoothCharacteristic char) {
                       .split(',')
                       .map((e) => int.parse(e.trim()))
                       .toList();
-                } else { //updated to automatically send hex and decimal values instead of Strings which fails to execute on AMS.
+                } else { //automatically send hex and decimal values instead of Strings which fails to execute on AMS.
                   bytes = input
                       .split(RegExp(r'[ ,]+'))
                       .map((e) {
