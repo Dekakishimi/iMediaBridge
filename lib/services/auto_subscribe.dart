@@ -23,26 +23,20 @@ class AutoSubscribe {
       for (var service in services) {
         if (service.uuid.toString().toUpperCase().contains('89D3502B')) {
           for (var char in service.characteristics) {
-            final charUuid = char.uuid.toString().toUpperCase();
+            if (char.uuid.toString().toUpperCase().contains('2F7CABCE')) {
+              // 1. Enable notifications
+              await _bleController.toggleNotification(char, (data) {});
 
-            // Only enable if NOT already notifying
-            if (!char.isNotifying) {
-              if (charUuid.contains('2F7CABCE')) {
-                await _bleController.toggleNotification(char, (data) {});
-              }
-              if (charUuid.contains('9B3C81D8')) {
-                if (char.properties.notify || char.properties.indicate) {
-                  await _bleController.toggleNotification(char, (data) {});
-                }
-              }
+              // 2. WAIT longer for the iPhone to stabilize subscriptions
+              await Future.delayed(const Duration(seconds: 1));
+
+              // 3. Initial metadata request (Specific attributes)
+              await InfoService().writeToAMS();
             }
+            // Only enable if NOT already notifying
           }
         }
       }
-
-      await Future.delayed(const Duration(milliseconds: 500));
-      await InfoService().writeToAMS();
-
       // 2. Mark as complete
       _isSetupComplete = true;
       print("AMS Setup marked as Complete.");

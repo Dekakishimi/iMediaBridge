@@ -86,7 +86,13 @@ class BleController {
   }
 
 Future<void> disconnectDevice(BluetoothDevice device) async {
-  // ... existing cleanup ...
+  for (var sub in _notificationSubscriptions.values) {
+    await sub.cancel();
+  }
+  _notificationSubscriptions.clear();
+
+  //Stop the Android Media Service and remove notification
+  await audioHandler.stop();
 
   // Reset the subscription flag
   AutoSubscribe.reset();
@@ -250,7 +256,9 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
       };
 
       // Auto-trigger a refresh if anything actually changed
-      handleUpdate();
+      if (existingCurrent.isNotEmpty) {
+        handleUpdate();
+      }
     }
 
     //  FOR NOTIF BTW:
