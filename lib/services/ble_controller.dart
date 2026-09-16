@@ -194,12 +194,24 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
 
     // --- ENTITY 1: QUEUE (Shuffle & Repeat) ---
     else if (rawValue[0] == 1) {
-      String info = utf8.decode(rawValue.skip(3).toList());
+      //DEBUGGING:
+      print("Raw Packet: $rawValue");
+
+      String info = utf8.decode(rawValue.skip(3).toList(), allowMalformed: true);
+      info = info.replaceAll(RegExp(r'\x00'), '').trim();
+
       int mode = int.tryParse(info) ?? 0;
+
+      //Attribute 0, is for Index but that hasn't been implemented yet so there is no need for that.
+      //Attribute 1, is for Count.
       if (rawValue[1] == 2) { // Attribute 2: Shuffle
         playerInfo.shuffleMode = mode;
+        print("shuffleMode:");
+        print(playerInfo.shuffleMode);
       } else if (rawValue[1] == 3) { // Attribute 3: Repeat
         playerInfo.repeatMode = mode;
+        print("repeatMode:");
+        print(playerInfo.repeatMode);
       }
       CurrentInfoString.updateTrigger.value++;
     }

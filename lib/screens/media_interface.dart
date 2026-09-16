@@ -1,4 +1,8 @@
-import 'package:flutter/material.dart';
+import 'package:material_3_expressive/components/buttons/m3e_buttons.dart';
+import 'package:material_3_expressive/components/icon_buttons/m3e_icon_buttons.dart';
+import 'package:material_3_expressive/components/progress_indicators/m3e_progress_indicators.dart';
+import 'package:material_3_expressive/components/sliders/m3e_sliders.dart';
+import 'package:material_ui/material_ui.dart';
 import '../services/ble_controller.dart';
 import '/models/current_info.dart';
 import 'dart:async';
@@ -157,12 +161,10 @@ Future<void> _triggerPlaybackDelaySync() async {
 
         // Basic style layout
         return Scaffold(
-          backgroundColor: Colors.white,
             appBar: AppBar(
-              backgroundColor: Colors.white,
               elevation: 0,
               leading: IconButton(
-                icon: const Icon(Icons.close, color: Colors.black), // "X" icon to close
+                icon: const Icon(Icons.close), // "X" icon to close
                 onPressed: () async {
                   final controller = BleController();
                   final device = controller.connectedDevice;
@@ -181,7 +183,7 @@ Future<void> _triggerPlaybackDelaySync() async {
               ),
               title: const Text(
                   "Now Playing",
-                  style: TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w600)
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)
               ),
               centerTitle: true,
             ),
@@ -233,7 +235,7 @@ Future<void> _triggerPlaybackDelaySync() async {
                           ),
                         ),
 
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 20),
 
                         // TEXT SECTION
                         Padding(
@@ -276,33 +278,16 @@ Future<void> _triggerPlaybackDelaySync() async {
 
                 const SizedBox(height: 20),
 
-                // Scrubber (Progress Bar)
+                // Progress Bar
                 Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    // 1. The Progress Bar (Using a custom Slider for the "Dot" and "Active Line" look)
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        trackHeight: 4,
-                        thumbShape: const RoundSliderThumbShape(
-                          enabledThumbRadius: 0, // Hidden thumb like modern iOS
-                          disabledThumbRadius: 0,
-                        ),
-                        overlayShape: SliderComponentShape.noOverlay,
-                        activeTrackColor: Colors.black.withValues(alpha: 0.8),
-                        inactiveTrackColor: Colors.black.withValues(alpha: 0.1),
-                        // If you want a thumb while dragging, you can set radius to 6
-                      ),
-                      child: Slider(
+                    M3EProgressIndicator.linearWavy(
                         value: (_localElapsed / totalDuration).clamp(0.0, 1.0),
-                        onChanged: null, // Set to null to make it read-only for now
+                        linearSize: M3EProgressIndicatorSize.m,
                       ),
-                    ),
 
-                    const SizedBox(height: 8),
-
-                    // 2. The Timing Text (Modern, spaced typography)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       child: Row(
@@ -332,8 +317,6 @@ Future<void> _triggerPlaybackDelaySync() async {
                   ],
                 ),
               ),
-
-                const SizedBox(height: 10),
 
                 // Main Playback Controls
                 Row(
@@ -386,11 +369,8 @@ Future<void> _triggerPlaybackDelaySync() async {
                       Expanded(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
+                          child: M3EProgressIndicator.linear(
                             value: (playerInfo!.volume / 1).clamp(0.0, 1.0),
-                            minHeight: 4,
-                            backgroundColor: Colors.grey[200],
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.grey[600]!),
                           ),
                         ),
                       ),
@@ -405,28 +385,36 @@ Future<void> _triggerPlaybackDelaySync() async {
                 ),
 
                 // Bottom Bar Accessories
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Row(
+
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      IconButton(
+                      //repeat
+                      M3EIconButton(
+                        variant: playerInfo.repeatMode != 0
+                            ? M3EIconButtonVariant.filled
+                            : M3EIconButtonVariant.outlined,
+                        shape: M3EIconButtonShapeVariant.square,
                         onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleRepeat),
                         icon: Icon(
                           playerInfo.repeatMode == 1 ? Icons.repeat_one_rounded : Icons.repeat_rounded,
                           color: playerInfo.repeatMode != 0 ? Colors.blue : Colors.black45,
                         ),
                       ),
-                      IconButton(
+                      //shuffle
+                      M3EIconButton(
                         onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleShuffle),
-                        icon: Icon(
-                          Icons.shuffle_rounded,
-                          color: playerInfo.shuffleMode != 0 ? Colors.blue : Colors.black45,
-                        ),
+                          variant: playerInfo.shuffleMode != 0
+                              ? M3EIconButtonVariant.filled
+                              : M3EIconButtonVariant.outlined,
+                        shape: M3EIconButtonShapeVariant.square,
+                          icon: const Icon(Icons.shuffle_rounded)
                       ),
                     ],
                   ),
-                ),
+
+                const Spacer(flex: 20 ),
+
               ],
             ),
           ),

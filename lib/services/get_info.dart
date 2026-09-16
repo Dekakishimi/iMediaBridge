@@ -45,6 +45,14 @@ class InfoService {
     }
   }
 
+  Future<void> syncRepeatShuffleModesOnly() async {
+    await _ensureUpdateChar();
+    if (_cachedUpdateChar != null) {
+      await _bleController.writeCharacteristic(_cachedUpdateChar!, [1, 2]);
+      await _bleController.writeCharacteristic(_cachedUpdateChar!, [1, 3]);
+    }
+  }
+
   Future<void> syncVolumeOnly() async {
     await _ensureUpdateChar();
     if (_cachedUpdateChar != null) {

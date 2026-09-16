@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../services/auto_subscribe.dart';
 import '/services/ble_controller.dart';
 import '/services/ble_device_filter.dart';
 import 'media_interface.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -51,24 +52,24 @@ class _ScanScreenState extends State<ScanScreen> {
             return const Center(child: Text('No devices found. Tap arrow to start scan.'));
           }
 
-          return ListView.builder(
+          return M3ECardList(
+            variant: M3ECardVariant.outlined,
             itemCount: results.length,
             itemBuilder: (context, index) {
               final result = results[index];
               final deviceInfo = BleDeviceFilter.getDeviceInfo(result);
 
-              return ListTile(
-                leading: Icon(
-                  deviceInfo.icon,
-                  color: deviceInfo.iconColor,
+              return M3EListItem(
+                leading: CircleAvatar(
+                  child: Icon(deviceInfo.icon, color: deviceInfo.iconColor),
                 ),
-                title: Text(deviceInfo.detectedName),
-                subtitle: Text('${result.device.remoteId} | RSSI: ${result.rssi} dBm'),
-                trailing: ElevatedButton(
+                headline: deviceInfo.detectedName,
+                supportingText: '${result.device.remoteId} | RSSI: ${result.rssi} dBm',
+                trailing: M3EButton(
                   child: const Text('Connect'),
                   onPressed: () async {
                     try {
-                      SnackBar(content: Text('Connecting...'));
+                      M3ESnackbar.show(context, message: 'Connecting...');
                       // 1. Establish BLE connection
                       await _bleController.connectToDevice(result.device);
 
@@ -86,9 +87,7 @@ class _ScanScreenState extends State<ScanScreen> {
                       }
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to connect: $e')),
-                        );
+                        M3ESnackbar.show(context, message: 'Failed to connect: $e');
                       }
                     }
                   },

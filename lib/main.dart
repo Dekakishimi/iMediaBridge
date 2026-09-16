@@ -1,5 +1,6 @@
 import 'package:audio_service/audio_service.dart';
-import 'package:flutter/material.dart';
+import 'package:material_3_expressive/foundations/foundations.dart';
+import 'package:material_ui/material_ui.dart';
 import '/services/media_audio_handler.dart';
 import 'screens/scan_screen.dart';
 import 'screens/first_time_setup.dart';
@@ -33,14 +34,20 @@ class MediaBridge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return M3EMaterialApp(
       title: 'iMediaBridge',
+      data: M3EThemeData.light(seedColor: const Color(0xFF6750A4)),
+      autoTheming: true,
+      dynamicColoring: true,
+      drawUnderSystemBars: false, // transparent system bars, edge-to-edge layout
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
       home: showSetup ? const ScanScreen() : const FirstTimeSetup(),
+
+      // data: M3EThemeData.light(seedColor: const Color(0xFF6750A4)),
+      // theme: ThemeData(
+      //   colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+      //   useMaterial3: true,
+
     );
   }
 }
