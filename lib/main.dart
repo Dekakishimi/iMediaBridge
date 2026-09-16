@@ -29,7 +29,7 @@ Future<void> main() async {
 
 class MediaBridge extends StatelessWidget {
   final bool showSetup;
-  MediaBridge({super.key, required this.showSetup});
+  const MediaBridge({super.key, required this.showSetup});
 
   @override
   Widget build(BuildContext context) {
