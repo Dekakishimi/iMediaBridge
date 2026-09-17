@@ -231,6 +231,7 @@ Future<void> _triggerPlaybackDelaySync() async {
                   ),
                 ),
 
+                const Spacer(flex: 1),
 
                 // --- BLUR / FETCHING SECTION START ---
                 ValueListenableBuilder(
@@ -303,6 +304,8 @@ Future<void> _triggerPlaybackDelaySync() async {
                 ),
                 // --- BLUR / FETCHING SECTION END ---
 
+                const Spacer(flex: 2),
+
                 const SizedBox(height: 20),
 
                 // Progress Bar
@@ -343,6 +346,8 @@ Future<void> _triggerPlaybackDelaySync() async {
                 ),
               ),
 
+                const Spacer(flex: 1),
+
                 // Main Playback Controls
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -375,6 +380,8 @@ Future<void> _triggerPlaybackDelaySync() async {
                     ),
                   ],
                 ),
+
+                const Spacer(flex: 1),
 
                 // Volume Control
                 Padding(
@@ -409,6 +416,8 @@ Future<void> _triggerPlaybackDelaySync() async {
                     ],
                   ),
                 ),
+
+                const Spacer(flex: 3),
 
                 // Bottom Bar Accessories
                 Container(
@@ -452,7 +461,10 @@ Future<void> _triggerPlaybackDelaySync() async {
                       ),
                     ],
                   ),
-                )
+                ),
+
+                const SizedBox(height: 16),
+
               ],
             ),
           ),

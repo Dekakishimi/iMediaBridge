@@ -9,12 +9,12 @@ Future<String> fetchArtwork(String artist, String track) async {
   final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
   final playerPackage = playerInfo?.playerName ?? "";
 
-  if (playerPackage == 'Youtube' || artist.toLowerCase().contains('youtube')) {
+  if (playerPackage == 'LiveContainer' || artist.toLowerCase().contains('livecontainer')) {
     return fetchYouTubeThumbnail(track, artist);
   }
 
-  if (playerPackage == 'LiveContainer' || artist.toLowerCase().contains('livecontainer')) {
-    return fetchYouTubeThumbnail(track, artist);
+  if (playerPackage == 'Music' || artist.toLowerCase().contains('music')) {
+    return fetchYouTubeMusicArtwork(track, artist);
   }
 
   try {
@@ -99,4 +99,71 @@ Future<String> fetchYouTubeThumbnail(String title, String channel) async {
   }
 
   return ""; // Returns empty string safely to fallback to the M3E video icon placeholder
+}
+
+Future<String> fetchYouTubeMusicArtwork(String artist, String track) async {
+  if (track.isEmpty || artist.isEmpty) return "";
+
+  try {
+    // 1. Construct the YouTube Music Search Endpoint URL
+    final query = Uri.encodeComponent('$artist $track');
+    final searchUrl = Uri.parse('https://music.youtube.com/search?q=$query');
+    print('Searching YouTube Music for artwork: $searchUrl');
+
+    // 2. Query the endpoint using a standard web browser User-Agent
+    final response = await http.get(searchUrl, headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'en-US,en;q=0.9',
+    });
+
+    if (response.statusCode == 200) {
+      final html = response.body;
+
+      // 3. Match Google's album image URL signature inside the script tags
+      // YouTube Music tracks images host on the lh3.googleusercontent.com or googleusercontent domains
+
+      final regExp = RegExp(
+        r'https?:\\?\/\\?\/[a-zA-Z0-9._-]+\.(?:googleusercontent|ggpht|ytimg)\.com\\?\/[^"\\ ]+'
+      );
+
+      // 2. Fetch all matches and find the first one that looks like a high-res cover
+      final matches = regExp.allMatches(html);
+      String artworkUrl = "";
+
+      for (final match in matches) {
+        String candidate = match.group(0)!;
+
+        // Clean the URL (remove escape characters)
+        candidate = candidate.replaceAll(r'\/', '/').replaceAll(r'\u003d', '=');
+
+        // YouTube Music search results often use hqdefault.jpg for videos in results.
+        // We want the ones that contain 'googleusercontent' (albums) or high-res video thumbnails.
+        if (candidate.contains('googleusercontent') || candidate.contains('hqdefault.jpg')) {
+          artworkUrl = candidate;
+          break;
+        }
+      }
+
+      if (artworkUrl.isNotEmpty) {
+        // UPGRADE RESOLUTION:
+        // For googleusercontent links:
+        artworkUrl = artworkUrl.replaceAll(RegExp(r'=w\d+-h\d+'), '=w1000-h1000');
+
+        // For ytimg (video) links, upgrade hqdefault to maxresdefault
+        if (artworkUrl.contains('hqdefault.jpg')) {
+          artworkUrl = artworkUrl.replaceAll('hqdefault.jpg', 'maxresdefault.jpg');
+        }
+        print('Successfully extracted YouTube Music Asset: $artworkUrl');
+        return artworkUrl;
+      } else {
+        print('No valid artwork candidates found in HTML.');
+      }
+    } else {
+      print('YouTube Music Server error status: ${response.statusCode}');
+    }
+  } catch (e) {
+    print('YouTube Music artwork scraper exception: $e');
+  }
+
+  return ""; // Returns empty safely to trigger fallback asset states
 }
