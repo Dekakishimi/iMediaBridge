@@ -3,8 +3,6 @@
 
 An application that can control & bridge media information (Currently Playing Track, Artist, etc...) from an iOS/iPadOS device to an Android device.
 
-NOTE: Currently the app uses itunes lookup for the Album Art. Thus, the cover might be incorrect...
-
 ## Compatibility
 
 This table is not complete, if you would like to help, please considering writing about it in issues.
@@ -12,14 +10,13 @@ This table is not complete, if you would like to help, please considering writin
 | Music Provider | Cover Art     | Track Information | Media Buttons* | Shuffle & Repeat|
 | -------------  | ------------- | ------------      |  ------        |---          
 | Apple Music    | ✅            |         ✅        |        ✅      |   ✅**  
-| Spotify        |       ✅ ***  |         ✅        |        ✅      |    ❌
-| Youtube Music  |       ✅ ***  |         ✅        |        ✅      |    ❌
+| Spotify        |       ✅   |         ✅        |        ✅      |    ❌
+| Youtube Music  |       ✅   |         ✅        |        ✅      |    ❌
 
 *for forward and rewind buttons, they depend on the implemantation of the Music Provider.
 
 **Apple Music repeat and shuffle buttons do not work on stations or playlist that does not have an end.
 
-***The cover art service uses itunes to find the art. If your playing song has a version on itunes, the art will be shown.
 
 (EX: Apple Music: 30 secs)
 ## Usage
@@ -28,14 +25,10 @@ This table is not complete, if you would like to help, please considering writin
 
 Both device must have their bluetooth turned on at all times for this app to work.
 
-I forgot to add the loop for these WEBP btw. so um- ya gonna have to refresh the website to see it :).
 
 How to connect.
 
-    1. Pair your phone to your Apple device.
+    1. REQUIRED: Pair your android to your Apple device.
+    2. Proceed with connection on your phone.
 
-![](./Demos/iPadView.webp)
 
-    2. Connect on the app.
-
-![](./Demos/PhoneView.webp)
