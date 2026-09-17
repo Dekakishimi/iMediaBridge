@@ -21,6 +21,17 @@ This table is not complete, if you would like to help, please considering writin
 (EX: Apple Music: 30 secs)
 ## Usage
 
+### Screenshots.
+
+<table>
+  <tr>
+    <td><img src="Demos/DarkScan.jpg" alt="DarkScan" width="200"></td>
+    <td><img src="Demos/DarkMedia.jpg" alt="DarkMedia" width="200"></td>
+    <td><img src="Demos/LightScan.jpg" alt="LightScan" width="200"></td>
+    <td><img src="Demos/LightMedia.jpg" alt="LightMedia" width="200"></td>
+  </tr>
+</table>
+
 ### Prerequisites.
 
 Both device must have their bluetooth turned on at all times for this app to work.
