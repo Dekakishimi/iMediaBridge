@@ -1,22 +1,37 @@
-// lib/services/artwork_service.dart
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import '../models/app_manufacturer_ids.dart';
 import '../models/current_info.dart';
 
 Future<String> fetchArtwork(String artist, String track) async {
+  if (track.isEmpty || artist.isEmpty) return "";
 
+  // 1. Get the current player app name and classify it
   final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
-  final playerPackage = playerInfo?.playerName ?? "";
+  final playerName = playerInfo?.playerName ?? "";
 
-  if (playerPackage == 'LiveContainer' || artist.toLowerCase().contains('livecontainer')) {
+  // 2. Determine the category (video vs music) using your classifier
+  final String category = AppClassifier.getCategory(playerName);
+
+  print('Routing search for category: $category (Player: $playerName)');
+
+  // 3. Routing Logic:
+  if (category == 'video') {
+    // Uses the 16:9 widescreen YouTube search
     return fetchYouTubeThumbnail(track, artist);
-  }
+  } else {
+    // Defaults to the 1:1 square YouTube Music search
+    String url = await fetchYouTubeMusicArtwork(artist, track);
 
-  if (playerPackage == 'Music' || artist.toLowerCase().contains('music')) {
-    return fetchYouTubeMusicArtwork(track, artist);
+    if (url.isEmpty) {
+      url = await fetchArtworkiTunes(artist, track); //As a backup
+    }
+    return url;
   }
+}
 
+Future<String> fetchArtworkiTunes(String artist, String track) async {
   try {
     print(track);
     print(artist);
@@ -147,7 +162,7 @@ Future<String> fetchYouTubeMusicArtwork(String artist, String track) async {
       if (artworkUrl.isNotEmpty) {
         // UPGRADE RESOLUTION:
         // For googleusercontent links:
-        artworkUrl = artworkUrl.replaceAll(RegExp(r'=w\d+-h\d+'), '=w1000-h1000');
+        artworkUrl = artworkUrl.replaceAll(RegExp(r'=w\d+-h\d+'), '=w500-h500');
 
         // For ytimg (video) links, upgrade hqdefault to maxresdefault
         if (artworkUrl.contains('hqdefault.jpg')) {
