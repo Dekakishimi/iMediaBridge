@@ -34,14 +34,17 @@ class RemoteControlService {
       final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
 
       if (playerInfo != null) {
-        if (command.first == 5) { // RemoteCommands.volumeUp is [5]
-          // Apple volume updates usually step by 0.0625 (1/16th chunks) or similar.
-          // Let's increment by 0.0625 and clamp it to a maximum of 1.0
-          playerInfo.volume = (playerInfo.volume + 0.0625).clamp(0.0, 1.0);
-          CurrentInfoString.updateTrigger.value++; // Instantly updates the progress bar
-        } else if (command.first == 6) { // RemoteCommands.volumeDown is [6]
-          playerInfo.volume = (playerInfo.volume - 0.0625).clamp(0.0, 1.0);
-          CurrentInfoString.updateTrigger.value++;
+        // Check if the command is either Volume Up (5) or Volume Down (6)
+        if (command.first == 5 || command.first == 6) {
+          playerInfo.lastVolumeChange = DateTime.now(); // Record the time for both
+          if (command.first == 5) {
+            // Volume Up: Add 0.0625
+            playerInfo.volume = (playerInfo.volume + 0.0625).clamp(0.0, 1.0);
+          } else {
+            // Volume Down: Subtract 0.0625
+            playerInfo.volume = (playerInfo.volume - 0.0625).clamp(0.0, 1.0);
+          }
+          CurrentInfoString.updateTrigger.value++; // Trigger UI update immediately
         }
       }
 

@@ -182,12 +182,16 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
         }
       }
       else if (rawValue[1] == 2) { // Attribute 2: Volume
+
+        final timeSinceManualChange = DateTime.now().difference(playerInfo.lastVolumeChange);
+        if (timeSinceManualChange.inMilliseconds > 500) {
         String curVol = utf8.decode(rawValue.skip(3).toList(), allowMalformed: true);
         curVol = curVol.replaceAll(RegExp(r'\x00'), '').trim();
         double? parsedVol = double.tryParse(curVol);
         if (parsedVol != null) {
           playerInfo.volume = parsedVol;
           CurrentInfoString.updateTrigger.value++;
+          }
         }
       }
       else if (rawValue[1] == 1) { // Attribute 1: Playback Info

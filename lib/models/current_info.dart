@@ -20,6 +20,7 @@ class MediaPlayerInfo {
   double volume;
   bool pendingArtistChange = false;
   bool pendingTitleChange = false;
+  DateTime lastVolumeChange = DateTime.now();
 
   MediaPlayerInfo({
     required this.trackName,
@@ -37,7 +38,8 @@ class MediaPlayerInfo {
     required this.repeatMode,
     required this.volume,
     required this. pendingArtistChange ,
-    required this. pendingTitleChange
+    required this. pendingTitleChange,
+    required this.lastVolumeChange,
 
   });
 }
@@ -65,6 +67,7 @@ class CurrentInfoString {
         pendingArtistChange: false,
         pendingTitleChange: false,
         playerName: '',
+        lastVolumeChange: DateTime.now(),
     ),
   };
 }
