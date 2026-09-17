@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:mediabridge/screens/scan_screen.dart';
 import '../services/ble_controller.dart';
 import 'media_interface.dart';
 import '../services/get_info.dart';
@@ -52,21 +53,24 @@ class _DeviceDetailsScreenState extends State<DeviceDetailsScreen> {
           IconButton( // Handle Disconnection
             icon: const Icon(Icons.bluetooth_disabled),
             onPressed: () async {
-              await _bleController.disconnectDevice(widget.device);
-              if (mounted) Navigator.of(context).pop();
+              final controller = BleController();
+              final device = controller.connectedDevice;
+
+              if (device != null) {
+                print("Disconnecting and exiting...");
+                // 1. Clean up BLE connection
+                await controller.disconnectDevice(device);
+              }
+
+              // 2. Go back to scan screen
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (context) => const ScanScreen()),
+                    (route) => false, // This clears the entire navigation history
+                  );
+                }
             },
           ),
-          IconButton( // Go to Media Interface
-            icon: const Icon(Icons.home),
-            onPressed: () async {
-              infoService.writeToAMS();
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const MediaInterface(),
-                ),
-              );
-            },
-          )
         ],
       ),
       body: _isLoading
