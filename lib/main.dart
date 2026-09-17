@@ -37,16 +37,18 @@ class MediaBridge extends StatelessWidget {
     return M3EMaterialApp(
       title: 'iMediaBridge',
       data: M3EThemeData.light(seedColor: const Color(0xFF6750A4)),
+      fontFamily: 'Google Sans Flex',
+      typeScaleMode: M3ETypeScaleMode.variable,
+      variableFont: const M3EVariableFontConfig(
+        global: M3EVariableFontAxes(wght: 400, opsz: 16),
+        brand: M3EVariableFontAxes(wght: 700),
+        body: M3EVariableFontAxes(wght: 400),
+      ),
       autoTheming: true,
       dynamicColoring: true,
       drawUnderSystemBars: false, // transparent system bars, edge-to-edge layout
       debugShowCheckedModeBanner: false,
       home: showSetup ? const ScanScreen() : const FirstTimeSetup(),
-
-      // data: M3EThemeData.light(seedColor: const Color(0xFF6750A4)),
-      // theme: ThemeData(
-      //   colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-      //   useMaterial3: true,
 
     );
   }

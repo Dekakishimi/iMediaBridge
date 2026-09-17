@@ -3,22 +3,23 @@ import 'package:flutter/foundation.dart';
 int isFixingDelay = 0; // used for duplicate call for fixing delay FIX.
 
 class MediaPlayerInfo {
-  List<Object>
-      trackName,
-      artistName,
-      repeatStatus,
-      shuffleStatus,
-      duration,
-      albumName;
-      double timeFromAMD;
-      double elapsedTime;
-      bool isPlaying;
-      String artworkURL;
-      int shuffleMode;
-      int repeatMode;
-      double volume;
-      bool pendingArtistChange = false;
-      bool pendingTitleChange = false;
+  List<Object> trackName;
+  List<Object> artistName;
+  List<Object> repeatStatus;
+  List<Object> shuffleStatus;
+  List<Object> duration;
+  List<Object> albumName;
+
+  double timeFromAMD;
+  double elapsedTime;
+  bool isPlaying;
+  String playerName;
+  String artworkURL;
+  int shuffleMode;
+  int repeatMode;
+  double volume;
+  bool pendingArtistChange = false;
+  bool pendingTitleChange = false;
 
   MediaPlayerInfo({
     required this.trackName,
@@ -30,6 +31,7 @@ class MediaPlayerInfo {
     required this.albumName,
     required this.timeFromAMD,
     required this.elapsedTime,
+    required this.playerName,
     required this.artworkURL,
     required this.shuffleMode,
     required this.repeatMode,
@@ -62,6 +64,7 @@ class CurrentInfoString {
         volume: 0.0,
         pendingArtistChange: false,
         pendingTitleChange: false,
+        playerName: '',
     ),
   };
 }

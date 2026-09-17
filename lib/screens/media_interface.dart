@@ -1,8 +1,6 @@
-import 'package:material_3_expressive/components/buttons/m3e_buttons.dart';
-import 'package:material_3_expressive/components/icon_buttons/m3e_icon_buttons.dart';
-import 'package:material_3_expressive/components/progress_indicators/m3e_progress_indicators.dart';
-import 'package:material_3_expressive/components/sliders/m3e_sliders.dart';
+import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
+import '../models/app_manufacturer_ids.dart';
 import '../services/ble_controller.dart';
 import '/models/current_info.dart';
 import 'dart:async';
@@ -10,7 +8,7 @@ import '../models/get_send_tables.dart';
 import '../services/get_info.dart';
 import 'dart:ui';
 import '../services/remote_control_service.dart';
-
+import 'device_details_screen.dart';
 
 class MediaInterface extends StatefulWidget {
   const MediaInterface({super.key});
@@ -104,13 +102,13 @@ Future<void> _triggerPlaybackDelaySync() async {
     return "$mins:${secs.toString().padLeft(2, '0')}";
   }
 
-  Widget _buildPlaceholder() {
+  Widget _buildPlaceholder(IconData icon) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(Icons.music_note_rounded, size: 120, color: Colors.grey[400]),
+      child: Icon(M3EIcons.music_note_rounded, size: 120, color: Colors.grey[400]),
     );
   }
 
@@ -121,8 +119,13 @@ Future<void> _triggerPlaybackDelaySync() async {
       builder: (context, triggerValue, child) {
         // Carryover the data from the current info map
         final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
+        String playerName = playerInfo?.playerName ?? "Unknown Player";
         // Data for album cover
         String artworkURL = playerInfo?.artworkURL ?? "";
+        bool isVideoMode = AppClassifier.getCategory(playerName) == 'video';
+
+        double targetAspectRatio = isVideoMode ? (16 / 9) : 1.0;
+        IconData placeholderIcon = isVideoMode ? M3EIcons.video_library_rounded : M3EIcons.music_note_rounded;
 
         // Extract all data (to avoid null pointer.)
         if (playerInfo != null && !CurrentInfoString.isFetching.value) {
@@ -160,39 +163,64 @@ Future<void> _triggerPlaybackDelaySync() async {
         }
 
         // Basic style layout
+
         return Scaffold(
-            appBar: AppBar(
-              elevation: 0,
-              leading: IconButton(
-                icon: const Icon(Icons.close), // "X" icon to close
-                onPressed: () async {
-                  final controller = BleController();
-                  final device = controller.connectedDevice;
+          appBar: AppBar(
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(M3EIcons.close), // "X" icon to close
+              onPressed: () async {
+                final controller = BleController();
+                final device = controller.connectedDevice;
 
+                if (device != null) {
+                  print("Disconnecting and exiting...");
+                  // 1. Clean up BLE connection
+                  await controller.disconnectDevice(device);
+                }
+
+                // 2. Go back to scan screen
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
+            title: Text(
+              // Gets the device name.
+                BleController().connectedDevice?.platformName.isNotEmpty == true
+                    ? BleController().connectedDevice!.platformName
+                    : "Now Playing",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)
+            ),
+            centerTitle: true,
+            actions: [
+              IconButton(
+                icon: const Icon(M3EIcons.settings_rounded),
+                onPressed: () {
+                  final device = BleController().connectedDevice;
                   if (device != null) {
-                    print("Disconnecting and exiting...");
-                    // 1. Clean up BLE connection
-                    await controller.disconnectDevice(device);
-                  }
-
-                  // 2. Go back to scan screen
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            DeviceDetailsScreen(device: device),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text("No connected device found.")),
+                    );
                   }
                 },
-              ),
-              title: const Text(
-                  "Now Playing",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)
-              ),
-              centerTitle: true,
-            ),
+               ),
+              ],
+             ),
           body: SafeArea(
             child: Column(
               children: [
                 // Top Indicator (Basic style grabber)
                 Padding(
-                  padding: const EdgeInsets.only(top: 10, bottom: 20),
+                  padding: const EdgeInsets.only(bottom: 20),
                   child: Container(
                     width: 40,
                     height: 5,
@@ -203,7 +231,6 @@ Future<void> _triggerPlaybackDelaySync() async {
                   ),
                 ),
 
-                const Spacer(flex: 1),
 
                 // --- BLUR / FETCHING SECTION START ---
                 ValueListenableBuilder(
@@ -215,20 +242,20 @@ Future<void> _triggerPlaybackDelaySync() async {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 40),
                           child: AspectRatio(
-                            aspectRatio: 1,
+                            aspectRatio: targetAspectRatio,
                             child: ImageFiltered(
                               imageFilter: ImageFilter.blur(
                                 sigmaX: fetching ? 8.0 : 0.0,
                                 sigmaY: fetching ? 8.0 : 0.0,
                               ),
                               child: (artworkURL.isEmpty)
-                                  ? _buildPlaceholder()
+                                  ? _buildPlaceholder(placeholderIcon)
                                   : ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
                                       child: Image.network(
                                         artworkURL,
                                         fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(),
+                                        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(placeholderIcon),
                                       ),
                                     ),
                             ),
@@ -296,7 +323,6 @@ Future<void> _triggerPlaybackDelaySync() async {
                           Text(
                             _formatDuration(_localElapsed),
                             style: TextStyle(
-                              color: Colors.black.withValues(alpha: 0.5),
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               fontFeatures: const [FontFeature.tabularFigures()], // Fixed width numbers!
@@ -305,7 +331,6 @@ Future<void> _triggerPlaybackDelaySync() async {
                           Text(
                             "-${_formatDuration(totalDuration - _localElapsed)}", // Countdown style
                             style: TextStyle(
-                              color: Colors.black.withValues(alpha: 0.5),
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
                               fontFeatures: const [FontFeature.tabularFigures()],
@@ -325,34 +350,31 @@ Future<void> _triggerPlaybackDelaySync() async {
                     IconButton(
                       iconSize: 45,
                       onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.previous),
-                      icon: const Icon(Icons.skip_previous_rounded, color: Colors.black),
+                      icon: const Icon(M3EIcons.skip_previous_rounded),
                     ),
                     IconButton(
                       iconSize: 45,
                       onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.rewind),
-                      icon: const Icon(Icons.replay_10, color: Colors.black),
+                      icon: const Icon(M3EIcons.replay_10),
                     ),
                     IconButton(
                       iconSize: 85,
                       onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.toggle),
                       icon: Icon(
-                        playerInfo?.isPlaying == true ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        color: Colors.black,
+                        playerInfo?.isPlaying == true ? M3EIcons.pause_rounded : M3EIcons.play_arrow_rounded,
                       ),
                     ),IconButton(
                       iconSize: 45,
                       onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.forward),
-                      icon: const Icon(Icons.forward_10, color: Colors.black),
+                      icon: const Icon(M3EIcons.forward_10),
                     ),
                     IconButton(
                       iconSize: 45,
                       onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.next),
-                      icon: const Icon(Icons.skip_next_rounded, color: Colors.black),
+                      icon: const Icon(M3EIcons.skip_next_rounded),
                     ),
                   ],
                 ),
-
-                const Spacer(flex: 1),
 
                 // Volume Control
                 Padding(
@@ -360,9 +382,11 @@ Future<void> _triggerPlaybackDelaySync() async {
                   child: Row(
                     children: [
                       // 1. Volume Down Button
-                      IconButton(
+                      M3EIconButton(
+                        variant: M3EIconButtonVariant.tonal,
+                        size: M3EIconButtonSize.xs,
                         onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.volumeDown),
-                        icon: const Icon(Icons.volume_down_rounded, size: 20, color: Colors.grey),
+                        icon: const Icon(M3EIcons.volume_down_rounded, size: 20),
                       ),
 
                       // 2. Volume Progress Bar
@@ -376,48 +400,63 @@ Future<void> _triggerPlaybackDelaySync() async {
                       ),
 
                       // 3. Volume Up Button
-                      IconButton(
+                      M3EIconButton(
+                        variant: M3EIconButtonVariant.tonal,
+                        size: M3EIconButtonSize.xs,
                         onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.volumeUp),
-                        icon: const Icon(Icons.volume_up_rounded, size: 20, color: Colors.grey),
+                        icon: const Icon(M3EIcons.volume_up_rounded, size: 20),
                       ),
                     ],
                   ),
                 ),
 
                 // Bottom Bar Accessories
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       //repeat
                       M3EIconButton(
                         variant: playerInfo.repeatMode != 0
                             ? M3EIconButtonVariant.filled
-                            : M3EIconButtonVariant.outlined,
-                        shape: M3EIconButtonShapeVariant.square,
+                            : M3EIconButtonVariant.tonal,
+                        shape: M3EIconButtonShapeVariant.round,
                         onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleRepeat),
                         icon: Icon(
-                          playerInfo.repeatMode == 1 ? Icons.repeat_one_rounded : Icons.repeat_rounded,
-                          color: playerInfo.repeatMode != 0 ? Colors.blue : Colors.black45,
+                          playerInfo.repeatMode == 1 ? M3EIcons.repeat_one_rounded : M3EIcons.repeat_rounded,
                         ),
                       ),
+
+                      const SizedBox(width: 0)
+                      ,
+                      //refresh the connection
+                      M3EIconButton(
+                        shape: M3EIconButtonShapeVariant.round,
+                        onPressed: () => InfoService().writeToAMS(),
+                        variant: M3EIconButtonVariant.tonal,
+                        icon: Icon(
+                          M3EIcons.refresh
+                        ),
+                      ),
+
+                      const SizedBox(width: 0),
                       //shuffle
                       M3EIconButton(
                         onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleShuffle),
                           variant: playerInfo.shuffleMode != 0
                               ? M3EIconButtonVariant.filled
-                              : M3EIconButtonVariant.outlined,
-                        shape: M3EIconButtonShapeVariant.square,
-                          icon: const Icon(Icons.shuffle_rounded)
+                              : M3EIconButtonVariant.tonal,
+                        shape: M3EIconButtonShapeVariant.round,
+                          icon: const Icon(M3EIcons.shuffle_rounded)
                       ),
                     ],
                   ),
-
-                const Spacer(flex: 20 ),
-
+                )
               ],
             ),
           ),
+          resizeToAvoidBottomInset: null,
         );
       },
     );

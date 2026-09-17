@@ -30,9 +30,22 @@ class RemoteControlService {
     if (_cachedRemoteChar == null) return;
 
     try {
-      await _bleController.writeCharacteristic(_cachedRemoteChar!, command);
 
       final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
+
+      if (playerInfo != null) {
+        if (command.first == 5) { // RemoteCommands.volumeUp is [5]
+          // Apple volume updates usually step by 0.0625 (1/16th chunks) or similar.
+          // Let's increment by 0.0625 and clamp it to a maximum of 1.0
+          playerInfo.volume = (playerInfo.volume + 0.0625).clamp(0.0, 1.0);
+          CurrentInfoString.updateTrigger.value++; // Instantly updates the progress bar
+        } else if (command.first == 6) { // RemoteCommands.volumeDown is [6]
+          playerInfo.volume = (playerInfo.volume - 0.0625).clamp(0.0, 1.0);
+          CurrentInfoString.updateTrigger.value++;
+        }
+      }
+
+      await _bleController.writeCharacteristic(_cachedRemoteChar!, command);
 
       if (command.first == 4 || command.first == 10) {
         if (playerInfo != null) {
@@ -42,6 +55,7 @@ class RemoteControlService {
       }
 
       // Handle Blur/Metadata refresh
+      bool isShuffleOrRepeat = (command.length == 1 && (command.first == 7 || command.first == 8));
       bool isSilent = RemoteCommands.silentCommands.any((c) =>
       c.length == command.length && c.first == command.first);
 
@@ -59,7 +73,12 @@ class RemoteControlService {
 
       } else {
         await Future.delayed(const Duration(milliseconds: 500));
-        await InfoService().writeToAMS();
+
+        if (isShuffleOrRepeat) {
+          await InfoService().syncRepeatShuffleModesOnly();
+        } else {
+          await InfoService().writeToAMS();
+        }
       }
     } catch (e) {
       print("Remote Command failed: $e");

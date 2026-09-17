@@ -1,3 +1,4 @@
+import 'package:material_3_expressive/material_3_expressive.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/ble_controller.dart';
@@ -22,14 +23,13 @@ class FirstTimeSetup extends StatelessWidget {
     final BleController bleController = BleController();
 
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.battery_saver_outlined, size: 80, color: Colors.grey),
+              const Icon(Icons.battery_saver_outlined, size: 80),
               const SizedBox(height: 24),
               const Text(
                 "Battery Permissions",
@@ -39,19 +39,17 @@ class FirstTimeSetup extends StatelessWidget {
               const Text(
                 "To keep your music info updated while your screen is off, iMediaBridge needs to be exempt from battery optimizations.",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 40),
 
-              ElevatedButton(
+              M3EButton(
                 onPressed: () async {
                   await bleController.requestBatteryOptimizationOff();
                   if (context.mounted) _completeSetup(context);
                   },
                 child: const Text("Allow Background Work"),
               ),
-
-              const SizedBox(height: 12),
 
               TextButton(
                 onPressed: () {
@@ -60,6 +58,14 @@ class FirstTimeSetup extends StatelessWidget {
                   );
                 },
                 child: const Text("Continue to Scanner"),
+              ),
+
+              const SizedBox(height: 12),
+
+              const Text(
+                "You may choose to deny this permission, though the app might die in the background...",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12),
               ),
             ],
           ),

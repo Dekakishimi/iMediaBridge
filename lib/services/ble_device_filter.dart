@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import '/models/manufacturer_ids.dart';
+import '/models/app_manufacturer_ids.dart';
 
 class BleDeviceInfo {
   final String detectedName;

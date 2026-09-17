@@ -170,9 +170,18 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
 
     // 2. Parse AMS Entity Updates
 
-    // --- ENTITY 0: PLAYER (Volume & Playback) ---
+    // --- ENTITY 0: PLAYER (Volume & Playback & Player Name) ---
     if (rawValue[0] == 0) {
-      if (rawValue[1] == 2) { // Attribute 2: Volume
+      if (rawValue[1] == 0) { // Attribute 0: Player Name / Bundle ID
+        String name = utf8.decode(rawValue.skip(3).toList(), allowMalformed: true);
+        name = name.replaceAll(RegExp(r'\x00'), '').trim();
+        if (name.isNotEmpty) {
+          playerInfo.playerName = name;
+          print("Active iOS Player App updated: $name");
+          CurrentInfoString.updateTrigger.value++;
+        }
+      }
+      else if (rawValue[1] == 2) { // Attribute 2: Volume
         String curVol = utf8.decode(rawValue.skip(3).toList(), allowMalformed: true);
         curVol = curVol.replaceAll(RegExp(r'\x00'), '').trim();
         double? parsedVol = double.tryParse(curVol);
@@ -180,13 +189,14 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
           playerInfo.volume = parsedVol;
           CurrentInfoString.updateTrigger.value++;
         }
-      } else if (rawValue[1] == 1) { // Attribute 1: Playback Info
+      }
+      else if (rawValue[1] == 1) { // Attribute 1: Playback Info
         String info = utf8.decode(rawValue.skip(3).toList());
         List<String> parts = info.split(',');
         if (parts.length >= 3) {
           playerInfo.isPlaying = parts[0] == "1";
           double timeFromAMD = double.tryParse(parts[2]) ?? 0.0;
-          playerInfo.elapsedTime = timeFromAMD; // Latency compensation
+          playerInfo.elapsedTime = timeFromAMD;
           CurrentInfoString.updateTrigger.value++;
         }
       }
@@ -284,7 +294,7 @@ Future<void> disconnectDevice(BluetoothDevice device) async {
       };
 
       // Auto-trigger a refresh if anything actually changed
-      if (existingCurrent.isNotEmpty) {
+      if (existingCurrent.isNotEmpty && (rawValue[0] == 2 || rawValue[0] == 0)) {
         handleUpdate();
       }
     }

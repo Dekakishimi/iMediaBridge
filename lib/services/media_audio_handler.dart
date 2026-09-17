@@ -29,8 +29,6 @@ class MediaBridgeAudioHandler extends BaseAudioHandler with SeekHandler {
   Future<void> skipToPrevious() => _remoteControlService.sendRemoteCommand(RemoteCommands.previous);
 
   // 3. Handle Seek from Notification
-  @override
-
   // 4. Custom method to update metadata from your BLE notifications
   void updateMetadata({
     required String title,
