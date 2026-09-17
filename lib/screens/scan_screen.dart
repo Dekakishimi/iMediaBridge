@@ -29,7 +29,7 @@ class _ScanScreenState extends State<ScanScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('MediaBridge'),
+        title: const Text('iMediaBridge'),
         actions: [
           IconButton(
             icon: Icon(_isScanning ? Icons.stop : Icons.restart_alt),
