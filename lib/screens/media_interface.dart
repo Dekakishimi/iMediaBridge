@@ -110,6 +110,8 @@ class _MediaInterfaceState extends State<MediaInterface> {
   @override
   Widget build(BuildContext context) {
 
+    // Control Scaling Variables.
+
     final Size size = MediaQuery.of(context).size;
     final double sw = size.width;  // Total Width
     final double sh = size.height; // Total Height
@@ -117,11 +119,18 @@ class _MediaInterfaceState extends State<MediaInterface> {
     final orientation = MediaQuery.of(context).orientation;
     final isLandscape = orientation == Orientation.landscape;
 
+    final double timeFontSize = sw > 900 ? 18 : (sw > 600 ? 15 : 13);
+
     final double titleFontSize = sw > 900 ? 34 : ( sw > 600 ? 28 : 24);
     final double artistFontSize = sw > 600 ? 24 : 22;
 
     final double titleHeight = titleFontSize * 1.5;
     final double artistHeight = artistFontSize * 1.5;
+
+    final double playbackIconSize = sw > 900 ? 65 : (sw > 600 ? 55 : 45);
+    final double mainToggleIconSize = sw > 900 ? 110 : (sw > 600 ? 90 : 85);
+    final progressSize = sw > 900 ? M3EProgressIndicatorSize.m : M3EProgressIndicatorSize.s;
+    final accessorySize = sw > 900 ? M3EIconButtonSize.md : M3EIconButtonSize.sm;
 
     return ValueListenableBuilder(
       valueListenable: CurrentInfoString.updateTrigger,
@@ -198,7 +207,7 @@ class _MediaInterfaceState extends State<MediaInterface> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                SizedBox(height: sw > 900 ? 32 : (isLandscape ? 16 : 24)),
 
                 // 2. TITLE & ARTIST
                 Padding(
@@ -239,6 +248,7 @@ class _MediaInterfaceState extends State<MediaInterface> {
         final controlsSection = Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Progress Bar
             Padding(
@@ -247,15 +257,15 @@ class _MediaInterfaceState extends State<MediaInterface> {
                 children: [
                   M3EProgressIndicator.linearWavy(
                     value: (_localElapsed / totalDuration).clamp(0.0, 1.0),
-                    linearSize: M3EProgressIndicatorSize.m,
+                    linearSize: progressSize,
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(_formatDuration(_localElapsed), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, fontFeatures: [FontFeature.tabularFigures()])),
-                        Text("-${_formatDuration(totalDuration - _localElapsed)}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, fontFeatures: [FontFeature.tabularFigures()])),
+                        Text(_formatDuration(_localElapsed), style: TextStyle(fontSize: timeFontSize, fontWeight: FontWeight.w500, fontFeatures: [FontFeature.tabularFigures()])),
+                        Text("-${_formatDuration(totalDuration - _localElapsed)}", style: TextStyle(fontSize: timeFontSize, fontWeight: FontWeight.w500, fontFeatures: [FontFeature.tabularFigures()])),
                       ],
                     ),
                   ),
@@ -266,15 +276,21 @@ class _MediaInterfaceState extends State<MediaInterface> {
             SizedBox(height: isLandscape ? 4 : 12),
 
             // Main Playback Controls
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButton(iconSize: 45, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.previous), icon: const Icon(M3EIcons.skip_previous_rounded)),
-                IconButton(iconSize: 45, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.rewind), icon: const Icon(M3EIcons.replay_10)),
-                IconButton(iconSize: 85, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.toggle), icon: Icon(playerInfo?.isPlaying == true ? M3EIcons.pause_rounded : M3EIcons.play_arrow_rounded)),
-                IconButton(iconSize: 45, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.forward), icon: const Icon(M3EIcons.forward_10)),
-                IconButton(iconSize: 45, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.next), icon: const Icon(M3EIcons.skip_next_rounded)),
-              ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(iconSize: playbackIconSize, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.previous), icon: const Icon(M3EIcons.skip_previous_rounded)),
+                    IconButton(iconSize: playbackIconSize, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.rewind), icon: const Icon(M3EIcons.replay_10)),
+                    IconButton(iconSize: mainToggleIconSize, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.toggle), icon: Icon(playerInfo?.isPlaying == true ? M3EIcons.pause_rounded : M3EIcons.play_arrow_rounded)),
+                    IconButton(iconSize: playbackIconSize, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.forward), icon: const Icon(M3EIcons.forward_10)),
+                    IconButton(iconSize: playbackIconSize, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.next), icon: const Icon(M3EIcons.skip_next_rounded)),
+                  ],
+                ),
+              ),
             ),
 
             SizedBox(height: isLandscape ? 4 : 12),
@@ -285,7 +301,7 @@ class _MediaInterfaceState extends State<MediaInterface> {
               child: Row(
                 children: [
                   M3EIconButton(variant: M3EIconButtonVariant.tonal, size: M3EIconButtonSize.xs, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.volumeDown), icon: const Icon(M3EIcons.volume_down_rounded, size: 20)),
-                  Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: ClipRRect(borderRadius: BorderRadius.circular(4), child: M3EProgressIndicator.linear(value: (playerInfo!.volume / 1).clamp(0.0, 1.0))))),
+                  Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: ClipRRect(borderRadius: BorderRadius.circular(4), child: M3EProgressIndicator.linear(value: (playerInfo!.volume / 1).clamp(0.0, 1.0), linearSize: progressSize)))),
                   M3EIconButton(variant: M3EIconButtonVariant.tonal, size: M3EIconButtonSize.xs, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.volumeUp), icon: const Icon(M3EIcons.volume_up_rounded, size: 20)),
                 ],
               ),
@@ -299,11 +315,11 @@ class _MediaInterfaceState extends State<MediaInterface> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  M3EIconButton(variant: playerInfo.repeatMode != 0 ? M3EIconButtonVariant.filled : M3EIconButtonVariant.tonal, shape: M3EIconButtonShapeVariant.round, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleRepeat), icon: Icon(playerInfo.repeatMode == 1 ? M3EIcons.repeat_one_rounded : M3EIcons.repeat_rounded)),
+                  M3EIconButton(size: accessorySize, variant: playerInfo.repeatMode != 0 ? M3EIconButtonVariant.filled : M3EIconButtonVariant.tonal, shape: M3EIconButtonShapeVariant.round, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleRepeat), icon: Icon(playerInfo.repeatMode == 1 ? M3EIcons.repeat_one_rounded : M3EIcons.repeat_rounded)),
                   const SizedBox(width: 12),
-                  M3EIconButton(shape: M3EIconButtonShapeVariant.round, onPressed: () => InfoService().writeToAMS(), variant: M3EIconButtonVariant.tonal, icon: const Icon(M3EIcons.refresh)),
+                  M3EIconButton(size: accessorySize, shape: M3EIconButtonShapeVariant.round, onPressed: () => InfoService().writeToAMS(), variant: M3EIconButtonVariant.tonal, icon: const Icon(M3EIcons.refresh)),
                   const SizedBox(width: 12),
-                  M3EIconButton(onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleShuffle), variant: playerInfo.shuffleMode != 0 ? M3EIconButtonVariant.filled : M3EIconButtonVariant.tonal, shape: M3EIconButtonShapeVariant.round, icon: const Icon(M3EIcons.shuffle_rounded)),
+                  M3EIconButton(size: accessorySize, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleShuffle), variant: playerInfo.shuffleMode != 0 ? M3EIconButtonVariant.filled : M3EIconButtonVariant.tonal, shape: M3EIconButtonShapeVariant.round, icon: const Icon(M3EIcons.shuffle_rounded)),
                 ],
               ),
             ),
