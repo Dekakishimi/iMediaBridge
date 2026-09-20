@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:mediabridge/screens/scan_screen.dart';
 import '../services/ble_controller.dart';
-import 'media_interface.dart';
 import '../services/get_info.dart';
 
 class DeviceDetailsScreen extends StatefulWidget {

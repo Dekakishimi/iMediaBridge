@@ -54,7 +54,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: M3ECardList(
+            child: M3ECardList.builder(
               variant: M3ECardVariant.outlined,
               itemCount: results.length,
               itemBuilder: (context, index) {

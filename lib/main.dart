@@ -46,7 +46,7 @@ class MediaBridge extends StatelessWidget {
       ),
       autoTheming: true,
       dynamicColoring: true,
-      drawUnderSystemBars: false, // transparent system bars, edge-to-edge layout
+      drawUnderSystemBars: true,
       debugShowCheckedModeBanner: false,
       home: showSetup ? const ScanScreen() : const FirstTimeSetup(),
 

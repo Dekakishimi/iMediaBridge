@@ -9,6 +9,8 @@ import '../services/get_info.dart';
 import 'dart:ui';
 import '../services/remote_control_service.dart';
 import 'device_details_screen.dart';
+import 'package:marquee/marquee.dart';
+import 'package:flutter/services.dart';
 
 class MediaInterface extends StatefulWidget {
   const MediaInterface({super.key});
@@ -18,46 +20,43 @@ class MediaInterface extends StatefulWidget {
 }
 
 class _MediaInterfaceState extends State<MediaInterface> {
-
   final RemoteControlService _remoteControlService = RemoteControlService();
 
-  //timer for scrubber
   Timer? _ticker;
   double _localElapsed = 0.0;
-  int _lastSyncValue = 0; // to ensure the elapsed doesn't stick to 0:00
+  int _lastSyncValue = 0;
   Timer? _fetchingTimeout;
 
+  @override
+  void initState() {
+    super.initState();
 
-@override
-void initState() {
-  super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-  //first time ticker for 1st updated song
-  _ticker = Timer.periodic(const Duration(milliseconds: 200), (timer) {
-    final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
-    if (playerInfo != null && playerInfo.isPlaying ){
-      setState(() {
-        _localElapsed += 0.2;
-      });
-    }
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+    ));
 
-   //every 5 second refresher, fixing the 1-2 second delay.
-    if (timer.tick % 50 == 0) {
-      _triggerPlaybackDelaySync();
-      InfoService().syncVolumeOnly();
-    }
-
-  });
-  CurrentInfoString.isFetching.addListener(_handleFetchingTimeout);
-}
-//TIMEOUT HELPER.
+    _ticker = Timer.periodic(const Duration(milliseconds: 200), (timer) {
+      final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
+      if (playerInfo != null && playerInfo.isPlaying) {
+        setState(() {
+          _localElapsed += 0.2;
+        });
+      }
+      if (timer.tick % 50 == 0) {
+        _triggerPlaybackDelaySync();
+        InfoService().syncVolumeOnly();
+      }
+    });
+    CurrentInfoString.isFetching.addListener(_handleFetchingTimeout);
+  }
 
   void _handleFetchingTimeout() {
     if (CurrentInfoString.isFetching.value) {
       _fetchingTimeout?.cancel();
       _fetchingTimeout = Timer(const Duration(seconds: 10), () {
         if (CurrentInfoString.isFetching.value) {
-          // Force unblur and show toast
           CurrentInfoString.isFetching.value = false;
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -75,27 +74,23 @@ void initState() {
     }
   }
 
-// Helper to send just the sync command
-Future<void> _triggerPlaybackDelaySync() async {
-  print("Fixing delay...");
-  isFixingDelay = 1;
-  // Use your existing InfoService
-  await InfoService().syncPlaybackOnly();
-  await Future.delayed(const Duration(milliseconds: 500)); //wait till the thing finishes processing.
-  isFixingDelay = 0;
-  // Note: Since writeToAMS now includes 'Playback', it will refresh the time.
-
-}
+  Future<void> _triggerPlaybackDelaySync() async {
+    print("Fixing Delay");
+    isFixingDelay = 1;
+    await InfoService().syncPlaybackOnly();
+    await Future.delayed(const Duration(milliseconds: 500));
+    isFixingDelay = 0;
+  }
 
   @override
   void dispose() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     CurrentInfoString.isFetching.removeListener(_handleFetchingTimeout);
     _fetchingTimeout?.cancel();
-    _ticker?.cancel(); // Stop the timer when the widget is destroyed
+    _ticker?.cancel();
     super.dispose();
   }
 
-  // Helper to format seconds (e.g., 125 -> "2:05")
   String _formatDuration(double seconds) {
     int mins = (seconds / 60).floor();
     int secs = (seconds % 60).floor();
@@ -108,89 +103,232 @@ Future<void> _triggerPlaybackDelaySync() async {
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(M3EIcons.music_note_rounded, size: 120, color: Colors.grey[400]),
+      child: Icon(icon, size: 120, color: Colors.grey[400]),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+
+    final Size size = MediaQuery.of(context).size;
+    final double sw = size.width;  // Total Width
+    final double sh = size.height; // Total Height
+
+    final orientation = MediaQuery.of(context).orientation;
+    final isLandscape = orientation == Orientation.landscape;
+
+    final double titleFontSize = sw > 900 ? 34 : ( sw > 600 ? 28 : 24);
+    final double artistFontSize = sw > 600 ? 24 : 22;
+
+    final double titleHeight = titleFontSize * 1.5;
+    final double artistHeight = artistFontSize * 1.5;
+
     return ValueListenableBuilder(
       valueListenable: CurrentInfoString.updateTrigger,
       builder: (context, triggerValue, child) {
-        // Carryover the data from the current info map
         final playerInfo = CurrentInfoString.registry['GetPlayerNameBytes'];
         String playerName = playerInfo?.playerName ?? "Unknown Player";
-        // Data for album cover
         String artworkURL = playerInfo?.artworkURL ?? "";
         bool isVideoMode = AppClassifier.getCategory(playerName) == 'video';
 
         double targetAspectRatio = isVideoMode ? (16 / 9) : 1.0;
         IconData placeholderIcon = isVideoMode ? M3EIcons.video_library_rounded : M3EIcons.music_note_rounded;
 
-        // Extract all data (to avoid null pointer.)
         if (playerInfo != null && !CurrentInfoString.isFetching.value) {
-          // 1. Check if a new BLE update has arrived
           if (_lastSyncValue != triggerValue) {
 
-            // 2. Calculate the difference between local time and iPhone time
-            double difference = (playerInfo.elapsedTime - _localElapsed).abs();
+            // 1. Calculate the Latency-Compensated Target Time
+            // We add 0.5s to the iPhone time to account for Bluetooth transmission delay
+            double targetTime = playerInfo.elapsedTime + 0.5;
 
-            // 3. Only jump if the drift is more than 0.5 seconds
+            // 2. Calculate the difference between local timer and our compensated target
+            double difference = (targetTime - _localElapsed).abs();
+
+            // 3. Perform Sync:
+            // We ignore the extra 0.5s offset in the drift window calculation
+            // by comparing the current local time to the targetTime.
             if (difference > 0.5 || playerInfo.elapsedTime < 1.0) {
-              print("Drift detected (${difference.toStringAsFixed(2)}s). Correcting...");
-              _localElapsed = playerInfo.elapsedTime;
+              print("Drift detected (${difference.toStringAsFixed(2)}s). Correcting to target...");
+              _localElapsed = targetTime;
             } else {
-              print("Sync ignored: Drift is negligible (${difference.toStringAsFixed(2)}s).");
+              print("Sync ignored: Drift is within tolerance (${difference.toStringAsFixed(2)}s).");
             }
-            // Always update the sync value so we don't re-run this logic until the next packet
+
             _lastSyncValue = triggerValue;
           }
         }
 
-        // Default values
         String trackTitle = "Unknown Track";
         String artistName = "Unknown Artist";
-        double totalDuration = 1.0; // Initialize the variable
+        double totalDuration = 1.0;
 
         if (playerInfo != null) {
-          // 1. Extract Duration String and convert to double
           if (playerInfo.duration.isNotEmpty) {
             totalDuration = double.tryParse(playerInfo.duration.first.toString()) ?? 1.0;
           }
-          // 2. Extract Title/Artist
           if (playerInfo.trackName.isNotEmpty) trackTitle = playerInfo.trackName.first.toString();
           if (playerInfo.artistName.isNotEmpty) artistName = playerInfo.artistName.first.toString();
         }
 
-        // Basic style layout
+        // --- SUB-UI: ARTWORK & METADATA ---
+        final metaSection = ValueListenableBuilder(
+          valueListenable: CurrentInfoString.isFetching,
+          builder: (context, fetching, child) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 1. ARTWORK
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: isLandscape ? 20 : 40),
+                  child: AspectRatio(
+                    aspectRatio: targetAspectRatio,
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: fetching ? 8.0 : 0.0, sigmaY: fetching ? 8.0 : 0.0),
+                      child: (artworkURL.isEmpty)
+                          ? _buildPlaceholder(placeholderIcon)
+                          : ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          artworkURL,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => _buildPlaceholder(placeholderIcon),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 2. TITLE & ARTIST
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 0),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: titleHeight,
+                        child: LayoutBuilder(builder: (context, constraints) {
+                          bool fits = (trackTitle.length * (titleFontSize * 0.45)) < constraints.maxWidth;
+                          return fits
+                              ? Center(child: Text(trackTitle, style: TextStyle(fontSize: titleFontSize, fontWeight: FontWeight.w700)))
+                              : Marquee(text: trackTitle, style: TextStyle(fontSize: titleFontSize, fontWeight: FontWeight.w700), scrollAxis: Axis.horizontal, crossAxisAlignment: CrossAxisAlignment.center, blankSpace: 80.0, velocity: 30.0, pauseAfterRound: const Duration(seconds: 3));
+                        }),
+                      ),
+                      const SizedBox(height: 4),
+                      SizedBox(
+                        height: artistHeight,
+                        child: LayoutBuilder(builder: (context, constraints) {
+                          bool fits = (artistName.length * (artistFontSize * 0.45)) < constraints.maxWidth;
+                          return fits
+                              ? Center(child: Text(artistName, style: TextStyle(fontSize: artistFontSize, color: Colors.grey[600])))
+                              : Marquee(text: artistName, style: TextStyle(fontSize: artistFontSize, color: Colors.grey[600]), scrollAxis: Axis.horizontal, crossAxisAlignment: CrossAxisAlignment.center, blankSpace: 80.0, velocity: 25.0, pauseAfterRound: const Duration(seconds: 3));
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+
+                if (!isLandscape) const SizedBox(height: 12),
+
+              ],
+            );
+          },
+        );
+
+        // --- SUB-UI: ALL CONTROLS ---
+        final controlsSection = Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Progress Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  M3EProgressIndicator.linearWavy(
+                    value: (_localElapsed / totalDuration).clamp(0.0, 1.0),
+                    linearSize: M3EProgressIndicatorSize.m,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(_formatDuration(_localElapsed), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, fontFeatures: [FontFeature.tabularFigures()])),
+                        Text("-${_formatDuration(totalDuration - _localElapsed)}", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, fontFeatures: [FontFeature.tabularFigures()])),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: isLandscape ? 4 : 12),
+
+            // Main Playback Controls
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                IconButton(iconSize: 45, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.previous), icon: const Icon(M3EIcons.skip_previous_rounded)),
+                IconButton(iconSize: 45, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.rewind), icon: const Icon(M3EIcons.replay_10)),
+                IconButton(iconSize: 85, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.toggle), icon: Icon(playerInfo?.isPlaying == true ? M3EIcons.pause_rounded : M3EIcons.play_arrow_rounded)),
+                IconButton(iconSize: 45, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.forward), icon: const Icon(M3EIcons.forward_10)),
+                IconButton(iconSize: 45, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.next), icon: const Icon(M3EIcons.skip_next_rounded)),
+              ],
+            ),
+
+            SizedBox(height: isLandscape ? 4 : 12),
+
+            // Volume Control
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Row(
+                children: [
+                  M3EIconButton(variant: M3EIconButtonVariant.tonal, size: M3EIconButtonSize.xs, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.volumeDown), icon: const Icon(M3EIcons.volume_down_rounded, size: 20)),
+                  Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: ClipRRect(borderRadius: BorderRadius.circular(4), child: M3EProgressIndicator.linear(value: (playerInfo!.volume / 1).clamp(0.0, 1.0))))),
+                  M3EIconButton(variant: M3EIconButtonVariant.tonal, size: M3EIconButtonSize.xs, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.volumeUp), icon: const Icon(M3EIcons.volume_up_rounded, size: 20)),
+                ],
+              ),
+            ),
+
+            SizedBox(height: isLandscape ? 8 : 16),
+
+            // Bottom Bar Accessories
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  M3EIconButton(variant: playerInfo.repeatMode != 0 ? M3EIconButtonVariant.filled : M3EIconButtonVariant.tonal, shape: M3EIconButtonShapeVariant.round, onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleRepeat), icon: Icon(playerInfo.repeatMode == 1 ? M3EIcons.repeat_one_rounded : M3EIcons.repeat_rounded)),
+                  const SizedBox(width: 12),
+                  M3EIconButton(shape: M3EIconButtonShapeVariant.round, onPressed: () => InfoService().writeToAMS(), variant: M3EIconButtonVariant.tonal, icon: const Icon(M3EIcons.refresh)),
+                  const SizedBox(width: 12),
+                  M3EIconButton(onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleShuffle), variant: playerInfo.shuffleMode != 0 ? M3EIconButtonVariant.filled : M3EIconButtonVariant.tonal, shape: M3EIconButtonShapeVariant.round, icon: const Icon(M3EIcons.shuffle_rounded)),
+                ],
+              ),
+            ),
+          ],
+        );
 
         return Scaffold(
+          extendBodyBehindAppBar: isLandscape,
           appBar: AppBar(
+            backgroundColor: isLandscape? Colors.transparent:null,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(M3EIcons.close), // "X" icon to close
+              icon: const Icon(M3EIcons.close),
               onPressed: () async {
                 final controller = BleController();
                 final device = controller.connectedDevice;
-
-                if (device != null) {
-                  print("Disconnecting and exiting...");
-                  // 1. Clean up BLE connection
-                  await controller.disconnectDevice(device);
-                }
-
-                // 2. Go back to scan screen
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
+                if (device != null) await controller.disconnectDevice(device);
+                if (context.mounted) Navigator.of(context).pop();
               },
             ),
-            title: Text(
-              // Gets the device name.
-                BleController().connectedDevice?.platformName.isNotEmpty == true
-                    ? BleController().connectedDevice!.platformName
-                    : "Now Playing",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)
+            title: isLandscape
+                ? null  // Removes the clashing title
+                : Text(
+              BleController().connectedDevice?.platformName ?? "Now Playing",
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             centerTitle: true,
             actions: [
@@ -199,272 +337,57 @@ Future<void> _triggerPlaybackDelaySync() async {
                 onPressed: () {
                   final device = BleController().connectedDevice;
                   if (device != null) {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            DeviceDetailsScreen(device: device),
-                      ),
-                    );
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text("No connected device found.")),
-                    );
+                    Navigator.of(context).push(MaterialPageRoute(builder: (context) => DeviceDetailsScreen(device: device)));
                   }
                 },
-               ),
-              ],
-             ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                // Top Indicator (Basic style grabber)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: Container(
-                    width: 40,
-                    height: 5,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
-
-                const Spacer(flex: 1),
-
-                // --- BLUR / FETCHING SECTION START ---
-                ValueListenableBuilder(
-                  valueListenable: CurrentInfoString.isFetching,
-                  builder: (context, fetching, child) {
-                    return Column(
-                      children: [
-                        // ARTWORK SECTION
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 40),
-                          child: AspectRatio(
-                            aspectRatio: targetAspectRatio,
-                            child: ImageFiltered(
-                              imageFilter: ImageFilter.blur(
-                                sigmaX: fetching ? 8.0 : 0.0,
-                                sigmaY: fetching ? 8.0 : 0.0,
-                              ),
-                              child: (artworkURL.isEmpty)
-                                  ? _buildPlaceholder(placeholderIcon)
-                                  : ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: Image.network(
-                                        artworkURL,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(placeholderIcon),
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // TEXT SECTION
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 32),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: ImageFiltered(
-                                  imageFilter: ImageFilter.blur(
-                                    sigmaX: fetching ? 8.0 : 0.0,
-                                    sigmaY: fetching ? 8.0 : 0.0,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start, // Aligns children to the left
-                                    children: [
-                                      Text(
-                                        trackTitle,
-                                        textAlign: TextAlign.left, // Forces text alignment to the left
-                                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        artistName,
-                                        textAlign: TextAlign.left, // Forces text alignment to the left
-                                        style: TextStyle(fontSize: 22, color: Colors.grey[600]),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                // --- BLUR / FETCHING SECTION END ---
-
-                const Spacer(flex: 2),
-
-                const SizedBox(height: 20),
-
-                // Progress Bar
-                Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    M3EProgressIndicator.linearWavy(
-                        value: (_localElapsed / totalDuration).clamp(0.0, 1.0),
-                        linearSize: M3EProgressIndicatorSize.m,
-                      ),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _formatDuration(_localElapsed),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              fontFeatures: const [FontFeature.tabularFigures()], // Fixed width numbers!
-                            ),
-                          ),
-                          Text(
-                            "-${_formatDuration(totalDuration - _localElapsed)}", // Countdown style
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              fontFeatures: const [FontFeature.tabularFigures()],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
               ),
-
-                const Spacer(flex: 1),
-
-                // Main Playback Controls
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    IconButton(
-                      iconSize: 45,
-                      onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.previous),
-                      icon: const Icon(M3EIcons.skip_previous_rounded),
-                    ),
-                    IconButton(
-                      iconSize: 45,
-                      onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.rewind),
-                      icon: const Icon(M3EIcons.replay_10),
-                    ),
-                    IconButton(
-                      iconSize: 85,
-                      onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.toggle),
-                      icon: Icon(
-                        playerInfo?.isPlaying == true ? M3EIcons.pause_rounded : M3EIcons.play_arrow_rounded,
-                      ),
-                    ),IconButton(
-                      iconSize: 45,
-                      onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.forward),
-                      icon: const Icon(M3EIcons.forward_10),
-                    ),
-                    IconButton(
-                      iconSize: 45,
-                      onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.next),
-                      icon: const Icon(M3EIcons.skip_next_rounded),
-                    ),
-                  ],
-                ),
-
-                const Spacer(flex: 1),
-
-                // Volume Control
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32),
-                  child: Row(
+            ],
+          ),
+          body: SafeArea(
+            top: !isLandscape,
+            bottom: !isLandscape,
+            child: isLandscape
+                ? Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16),
+                child: Row(
+              children: [
+                Expanded(flex: 25, child: Center(child: SingleChildScrollView(padding: EdgeInsets.symmetric(horizontal: (sw * 0.035).clamp(20, 60), vertical: 0), child: metaSection))),
+                Expanded(flex: 30, child: Center(child: SingleChildScrollView(padding: EdgeInsets.only(top: (sh * 0.1).clamp(20, 40), left: (sw * 0.06).clamp(16, 40), right: (sw * 0.06).clamp(16, 40)), child: controlsSection,))),
+              ],
+            ),
+        ) : CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false, // This is key: it makes Spacers work
+                  child: Column(
                     children: [
-                      // 1. Volume Down Button
-                      M3EIconButton(
-                        variant: M3EIconButtonVariant.tonal,
-                        size: M3EIconButtonSize.xs,
-                        onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.volumeDown),
-                        icon: const Icon(M3EIcons.volume_down_rounded, size: 20),
-                      ),
-
-                      // 2. Volume Progress Bar
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: M3EProgressIndicator.linear(
-                            value: (playerInfo!.volume / 1).clamp(0.0, 1.0),
+                      // Top Indicator
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Container(
+                          width: 40,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
 
-                      // 3. Volume Up Button
-                      M3EIconButton(
-                        variant: M3EIconButtonVariant.tonal,
-                        size: M3EIconButtonSize.xs,
-                        onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.volumeUp),
-                        icon: const Icon(M3EIcons.volume_up_rounded, size: 20),
-                      ),
+                      const Spacer(flex: 1),
+
+                      metaSection,
+
+                      const SizedBox(height: 12),
+
+                      controlsSection,
+
+                      const Spacer(flex: 3),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
-
-                const Spacer(flex: 3),
-
-                // Bottom Bar Accessories
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      //repeat
-                      M3EIconButton(
-                        variant: playerInfo.repeatMode != 0
-                            ? M3EIconButtonVariant.filled
-                            : M3EIconButtonVariant.tonal,
-                        shape: M3EIconButtonShapeVariant.round,
-                        onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleRepeat),
-                        icon: Icon(
-                          playerInfo.repeatMode == 1 ? M3EIcons.repeat_one_rounded : M3EIcons.repeat_rounded,
-                        ),
-                      ),
-
-                      const SizedBox(width: 0)
-                      ,
-                      //refresh the connection
-                      M3EIconButton(
-                        shape: M3EIconButtonShapeVariant.round,
-                        onPressed: () => InfoService().writeToAMS(),
-                        variant: M3EIconButtonVariant.tonal,
-                        icon: Icon(
-                          M3EIcons.refresh
-                        ),
-                      ),
-
-                      const SizedBox(width: 0),
-                      //shuffle
-                      M3EIconButton(
-                        onPressed: () => _remoteControlService.sendRemoteCommand(RemoteCommands.cycleShuffle),
-                          variant: playerInfo.shuffleMode != 0
-                              ? M3EIconButtonVariant.filled
-                              : M3EIconButtonVariant.tonal,
-                        shape: M3EIconButtonShapeVariant.round,
-                          icon: const Icon(M3EIcons.shuffle_rounded)
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
               ],
             ),
           ),
