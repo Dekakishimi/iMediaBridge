@@ -5,7 +5,7 @@ An application that can control & bridge media information (Currently Playing Tr
 
 ## Compatibility
 
-This table is not complete, if you would like to help, please considering writing about it in issues.
+This table is not complete, if you would like to help, please consider writing about it in issues.
 
 | Music Provider | Cover Art     | Track Information | Media Buttons* | Shuffle & Repeat|
 | -------------  | ------------- | ------------      |  ------        |---          
