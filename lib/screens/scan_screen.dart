@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../services/auto_subscribe.dart';
+import '../services/update_checker.dart';
 import '/services/ble_controller.dart';
 import '/services/ble_device_filter.dart';
 import 'media_interface.dart';
@@ -22,6 +23,14 @@ class _ScanScreenState extends State<ScanScreen> {
     super.initState();
     FlutterBluePlus.isScanning.listen((scanning) {
       if (mounted) setState(() => _isScanning = scanning);
+    });
+
+    // Check for updates on startup
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final release = await UpdateChecker.checkForUpdate();
+      if (release != null && mounted) {
+        UpdateChecker.showUpdateDialog(context, release);
+      }
     });
   }
 
